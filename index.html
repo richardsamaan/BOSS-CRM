@@ -1,0 +1,3200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>BOSS CRM</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0A0A0A">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="BOSS CRM">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  :root{
+    --ink:#0A0A0A;
+    --paper:#F4F1EA;
+    --card:#FFFFFF;
+    --accent:#0A0A0A;
+    --accent-hover:#000000;
+    --gold:#AD8A54;
+    --gold-dark:#8F7040;
+    --gold-bg:#F3ECDF;
+    --grey:#6F6D6A;
+    --grey-light:#A8A6A2;
+    --line:rgba(10,10,10,0.11);
+    --danger:#B3261E;
+    --danger-bg:#FBEAEA;
+    --ok-bg:#EAF1EC;
+    --ok:#1F6D3B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter','Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:1180px;margin:0 auto;padding:28px 24px 64px;}
+
+  .topbar{
+    display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+    background:var(--ink);color:#fff;
+    padding:20px 26px;margin-bottom:28px;border-radius:2px;
+    gap:14px;
+  }
+  .topbar .topspacer{}
+  .brandmark{display:flex;flex-direction:column;gap:3px;align-items:center;text-align:center;}
+  .brandmark .name{
+    font-family:'Inter',Arial,sans-serif;
+    font-size:24px;letter-spacing:6px;font-weight:800;text-transform:uppercase;
+  }
+  .brandmark .sub{
+    font-size:10px;letter-spacing:4px;text-transform:uppercase;color:#B8B6B2;font-weight:500;
+  }
+  .topactions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-self:end;}
+  .count-pill{
+    font-size:11.5px;color:#D8D6D2;border:1px solid rgba(255,255,255,0.28);
+    padding:6px 13px;border-radius:1px;white-space:nowrap;letter-spacing:0.3px;
+  }
+  .user-pill{
+    font-size:11.5px;border:1px solid rgba(255,255,255,0.5);padding:6px 13px;border-radius:1px;
+    white-space:nowrap;display:flex;align-items:center;gap:8px;color:#fff;
+  }
+  .user-pill .role{
+    font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#fff;
+    background:var(--gold);padding:2px 7px;border-radius:1px;font-weight:700;
+  }
+
+  button{
+    font-family:inherit;cursor:pointer;border-radius:1px;
+    font-size:12.5px;letter-spacing:0.8px;text-transform:uppercase;font-weight:600;
+    transition:background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .btn-primary{
+    background:var(--ink);color:#fff;border:1px solid var(--ink);
+    padding:11px 20px;
+  }
+  .btn-primary:hover{background:var(--accent-hover);}
+  .btn-outline{
+    background:transparent;color:var(--ink);border:1px solid var(--ink);
+    padding:11px 20px;
+  }
+  .btn-outline:hover{background:var(--ink);color:#fff;}
+  .btn-brass{
+    background:var(--ink);color:#fff;border:1px solid var(--ink);
+    padding:11px 20px;
+  }
+  .btn-brass:hover{background:var(--accent-hover);}
+  .btn-gold{
+    background:var(--gold);color:#fff;border:1px solid var(--gold);
+    padding:11px 20px;
+  }
+  .btn-gold:hover{background:var(--gold-dark);border-color:var(--gold-dark);}
+  .btn-text{
+    background:none;border:none;color:var(--grey);text-decoration:underline;
+    font-size:11.5px;padding:4px;text-transform:none;letter-spacing:0.2px;font-weight:500;
+  }
+  .btn-text.danger{color:var(--danger);}
+  button:disabled{opacity:0.4;cursor:not-allowed;}
+  .topactions .user-pill,.topactions .count-pill{text-transform:none;}
+
+  .layout{display:grid;grid-template-columns:300px 1fr;gap:24px;}
+  @media(max-width:860px){.layout{grid-template-columns:1fr;}}
+
+  .sidebar{
+    background:var(--card);border:1px solid var(--line);border-radius:3px;border-top:3px solid var(--gold);
+    padding:18px;height:fit-content;box-shadow:0 2px 10px rgba(10,10,10,0.05);
+  }
+  .search-input{
+    width:100%;padding:10px 11px;font-size:13px;border:1px solid var(--line);
+    border-radius:1px;margin-bottom:12px;background:var(--paper);font-family:inherit;
+  }
+  .search-input:focus{outline:none;border-color:var(--gold);}
+  .client-list{display:flex;flex-direction:column;gap:5px;max-height:560px;overflow-y:auto;}
+  .client-row{
+    display:flex;flex-direction:column;gap:2px;padding:11px 11px;
+    border:1px solid transparent;border-left:3px solid transparent;border-radius:2px;cursor:pointer;
+  }
+  .client-row:hover{background:var(--paper);}
+  .client-row.active{background:var(--gold-bg);border-left-color:var(--gold);}
+  .client-row .cname{font-size:13.5px;font-weight:700;}
+  .client-row .cmeta{font-size:11px;color:var(--grey);letter-spacing:0.2px;}
+  .empty-note{font-size:12.5px;color:var(--grey);text-align:center;padding:24px 6px;}
+
+  .lookup-card{
+    background:var(--card);border:1px solid var(--line);border-radius:3px;border-top:3px solid var(--gold);padding:20px;
+    box-shadow:0 2px 10px rgba(10,10,10,0.05);
+  }
+  .lookup-card .eyebrow{
+    font-size:10.5px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;font-weight:700;
+  }
+  .lookup-card .title{
+    font-family:'Inter',Arial,sans-serif;font-size:18px;margin:3px 0 6px;font-weight:800;
+    letter-spacing:0.3px;
+  }
+  .lookup-card p{font-size:12.5px;color:var(--grey);margin:0 0 14px;line-height:1.5;}
+  .lookup-card input{
+    width:100%;padding:10px 11px;font-size:13.5px;border:1px solid var(--line);
+    border-radius:1px;background:var(--paper);margin-bottom:10px;font-family:inherit;
+  }
+  .lookup-card input:focus{outline:none;border-color:var(--gold);}
+  .lookup-result{
+    margin-top:14px;padding:12px;border-radius:1px;font-size:12.5px;line-height:1.5;
+  }
+  .lookup-result.found{background:var(--ok-bg);color:var(--ok);}
+  .lookup-result.notfound{background:var(--danger-bg);color:var(--danger);}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:3px;border-top:3px solid var(--gold);padding:28px 30px 32px;box-shadow:0 2px 10px rgba(10,10,10,0.05);}
+
+  .view-banner{
+    background:var(--paper);color:var(--ink);font-size:12.5px;
+    padding:11px 15px;border-radius:1px;margin-bottom:24px;display:none;line-height:1.5;
+    border-left:3px solid var(--gold);
+  }
+  .view-banner.show{display:block;}
+
+  .tags-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px;}
+  .tag-chip{
+    font-size:11px;font-weight:700;letter-spacing:0.3px;text-transform:uppercase;
+    padding:6px 14px;border-radius:20px;border:1px solid var(--line);background:var(--paper);
+    color:var(--grey);cursor:pointer;user-select:none;transition:all .12s;
+  }
+  .tag-chip:hover{border-color:var(--gold);}
+  .tag-chip.on{border-color:transparent;color:#fff;}
+  .tag-chip.on[data-tag="VIP"]{background:#B8862E;}
+  .tag-chip.on[data-tag="Frequent"]{background:#3E6B52;}
+  .tag-chip.on[data-tag="New"]{background:#3A5A8C;}
+  .tag-chip[disabled],.tag-chip.readonly{cursor:default;opacity:0.85;}
+  .list-tag{
+    display:inline-block;font-size:8.5px;font-weight:800;letter-spacing:0.3px;padding:2px 6px;
+    border-radius:8px;color:#fff;margin-left:6px;vertical-align:middle;
+  }
+  .list-tag[data-tag="VIP"]{background:#B8862E;}
+  .list-tag[data-tag="Frequent"]{background:#3E6B52;}
+  .list-tag[data-tag="New"]{background:#3A5A8C;}
+
+  .section{margin-bottom:32px;}
+  .section-head{margin-bottom:18px;}
+  .section-head .eyebrow{
+    font-size:10.5px;letter-spacing:2.5px;color:var(--gold);text-transform:uppercase;
+    font-weight:700;
+  }
+  .section-head .title{
+    font-family:'Inter',Arial,sans-serif;font-size:20px;margin:3px 0 10px;font-weight:800;
+    letter-spacing:0.2px;text-transform:uppercase;
+  }
+  .ruler{
+    height:3px;background:var(--gold);width:56px;
+  }
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .grid.two{grid-template-columns:repeat(2,1fr);}
+  @media(max-width:640px){.grid{grid-template-columns:1fr;} .grid.two{grid-template-columns:1fr;}}
+
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:11px;color:var(--grey);letter-spacing:0.3px;font-weight:500;}
+  .field label .req{color:var(--danger);}
+  .field input[type=text],.field input[type=email],.field input[type=tel],.field input[type=number],.field input[type=date],.field textarea{
+    width:100%;padding:10px 11px;font-size:13.5px;border:1px solid var(--line);
+    border-radius:1px;background:var(--paper);font-family:inherit;color:var(--ink);
+  }
+  .field input:focus,.field textarea:focus{outline:none;border-color:var(--gold);}
+  .field input.err{border-color:var(--danger);background:var(--danger-bg);}
+  .field input:disabled,.field textarea:disabled,.field select:disabled{
+    background:#EAE9E6;color:var(--grey);
+  }
+
+  .phone-group{display:flex;gap:0;}
+  .wa-chat-btn{
+    flex:0 0 auto;width:40px;font-size:16px;background:#25D366;color:#fff;border:none;
+    cursor:pointer;border-radius:0 2px 2px 0;
+  }
+  .wa-chat-btn:disabled{background:var(--line);cursor:not-allowed;opacity:0.6;}
+  .phone-group select{
+    width:104px;flex-shrink:0;padding:10px 4px 10px 9px;font-size:12.5px;
+    border:1px solid var(--line);border-right:none;border-radius:1px 0 0 1px;
+    background:var(--paper);font-family:inherit;color:var(--ink);
+  }
+  .phone-group input{
+    flex:1;min-width:0;border-radius:0 1px 1px 0;
+  }
+  .phone-group select:focus{outline:none;border-color:var(--gold);}
+  .phone-group select.err,.phone-group input.err{border-color:var(--danger);background:var(--danger-bg);}
+  .field.measure input{text-align:right;font-family:'SF Mono','Courier New',monospace;}
+  .field .inch{position:relative;}
+  .field .inch input{padding-right:28px;}
+  .field .inch::after{
+    content:'in';position:absolute;right:10px;top:50%;transform:translateY(-50%);
+    font-size:11px;color:var(--grey-light);pointer-events:none;
+  }
+  textarea{min-height:78px;resize:vertical;}
+  .field input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.5) sepia(1) saturate(2) hue-rotate(10deg);cursor:pointer;}
+
+  .error-msg{
+    font-size:12px;color:var(--danger);margin-top:10px;display:none;
+  }
+  .error-msg.show{display:block;}
+
+  .footer-actions{
+    display:flex;justify-content:space-between;align-items:center;
+    border-top:1px solid var(--line);padding-top:22px;margin-top:6px;flex-wrap:wrap;gap:10px;
+  }
+  .id-tag{font-family:'SF Mono','Courier New',monospace;font-size:11.5px;color:var(--grey);letter-spacing:0.2px;}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:12px 22px;border-radius:1px;
+    font-size:13px;opacity:0;pointer-events:none;transition:opacity 0.25s ease;
+    z-index:50;letter-spacing:0.2px;
+  }
+  .toast.show{opacity:1;}
+
+  .loading{padding:60px 0;text-align:center;color:var(--grey);font-size:13px;}
+
+  .config-banner{
+    background:var(--danger-bg);color:var(--danger);font-size:12.5px;line-height:1.5;
+    padding:12px 16px;border-radius:2px;margin-bottom:20px;border-left:3px solid var(--danger);
+    display:none;
+  }
+  .config-banner.show{display:block;}
+
+  /* ---- Login overlay ---- */
+  .login-overlay{
+    position:fixed;inset:0;background:var(--ink);display:flex;align-items:center;justify-content:center;
+    z-index:100;padding:20px;
+  }
+  .login-card{
+    background:var(--card);width:100%;max-width:380px;padding:36px 32px;border-radius:2px;
+  }
+  .login-card .brandmark{margin-bottom:26px;text-align:center;align-items:center;}
+  .login-card .brandmark .name{font-size:24px;letter-spacing:5px;}
+  .login-card .brandmark .sub{color:var(--grey);}
+  .login-field{margin-bottom:14px;display:flex;flex-direction:column;gap:6px;}
+  .login-field label{font-size:11px;color:var(--grey);font-weight:500;}
+  .login-field select,.login-field input{
+    width:100%;padding:11px 11px;font-size:13.5px;border:1px solid var(--line);
+    border-radius:1px;background:var(--paper);font-family:inherit;
+  }
+  .login-field select:focus,.login-field input:focus{outline:none;border-color:var(--gold);}
+  .login-msg{font-size:12px;color:var(--danger);margin:4px 0 10px;display:none;line-height:1.5;}
+  .login-msg.show{display:block;}
+  .login-msg.info{color:var(--ink);background:var(--paper);padding:12px 14px;border-left:3px solid var(--gold);border-radius:1px;font-size:12.5px;}
+  .req-pill{
+    font-size:9.5px;letter-spacing:0.3px;text-transform:uppercase;font-weight:700;
+    padding:3px 9px;border-radius:20px;background:var(--gold-bg);color:var(--brass);
+  }
+  .login-note{font-size:11.5px;color:var(--grey);margin-top:18px;line-height:1.6;text-align:center;}
+  .login-card button{width:100%;padding:12px;margin-top:4px;}
+
+  /* ---- Staff manage modal ---- */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(10,10,10,0.6);display:none;
+    align-items:center;justify-content:center;z-index:90;padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-card{
+    background:var(--card);width:100%;max-width:540px;padding:28px 30px;border-radius:2px;
+    max-height:82vh;overflow-y:auto;
+  }
+  .modal-card.wide{max-width:920px;}
+  .modal-card .title{
+    font-family:'Inter',Arial,sans-serif;font-size:19px;margin-bottom:4px;font-weight:800;
+    text-transform:uppercase;letter-spacing:0.5px;
+  }
+  .modal-card p{font-size:12.5px;color:var(--grey);margin:0 0 18px;line-height:1.5;}
+  .staff-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:11px 0;border-bottom:1px solid var(--line);
+  }
+  .staff-row:last-child{border-bottom:none;}
+  .staff-row .info .n{font-size:13.5px;font-weight:700;}
+  .staff-row .info .i{font-size:11px;color:var(--grey);}
+  .staff-status{font-size:10.5px;padding:3px 9px;border-radius:1px;letter-spacing:0.3px;text-transform:uppercase;font-weight:600;}
+  .staff-status.active{background:var(--ok-bg);color:var(--ok);}
+  .staff-status.pending{background:var(--danger-bg);color:var(--danger);}
+  .modal-close{text-align:right;margin-top:18px;}
+
+  /* ---- Import wizard ---- */
+  .import-steps{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap;}
+  .import-step-pill{
+    font-size:10.5px;letter-spacing:0.3px;text-transform:uppercase;font-weight:700;
+    padding:6px 12px;border-radius:20px;background:var(--paper);color:var(--grey);
+    border:1px solid var(--line);
+  }
+  .import-step-pill.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .import-step-pill.done{background:var(--ok-bg);color:var(--ok);border-color:var(--ok-bg);}
+  .import-dropzone{
+    border:2px dashed var(--line);border-radius:3px;padding:40px 20px;text-align:center;
+    color:var(--grey);font-size:13px;cursor:pointer;background:var(--paper);
+  }
+  .import-dropzone:hover{border-color:var(--gold);}
+  .import-table-wrap{max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:2px;margin:14px 0;}
+  .import-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .import-table th{
+    background:var(--paper);text-align:left;padding:8px 10px;font-size:10.5px;text-transform:uppercase;
+    letter-spacing:0.3px;color:var(--grey);position:sticky;top:0;border-bottom:1px solid var(--line);white-space:nowrap;
+  }
+  .import-table td{padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;}
+  .import-table tr:last-child td{border-bottom:none;}
+  .import-summary-stats{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0;}
+  .import-summary-stats .stat{background:var(--paper);border-radius:2px;padding:10px 16px;flex:1;min-width:110px;text-align:center;}
+  .import-summary-stats .stat .num{font-size:20px;font-weight:800;}
+  .import-summary-stats .stat.warn .num{color:var(--danger);}
+  .import-summary-stats .stat.ok .num{color:var(--ok);}
+  .import-summary-stats .stat .lbl{font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:0.4px;margin-top:2px;}
+  .map-row{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);}
+  .map-row:last-child{border-bottom:none;}
+  .map-row .field-name{font-size:12.5px;font-weight:600;}
+  .map-row .field-name .req{color:var(--danger);font-weight:700;}
+  .map-row select{width:100%;padding:8px 9px;font-size:12.5px;border:1px solid var(--line);border-radius:1px;background:var(--paper);font-family:inherit;}
+  .map-arrow{color:var(--grey-light);font-size:14px;}
+  .error-row{background:var(--danger-bg);}
+  .dup-row{background:var(--gold-bg);}
+  .dup-action-select{padding:5px 6px;font-size:11.5px;border:1px solid var(--line);border-radius:1px;background:#fff;font-family:inherit;}
+  .import-footer{display:flex;justify-content:space-between;align-items:center;margin-top:20px;gap:10px;flex-wrap:wrap;}
+
+  .measure-toggle-wrap{
+    text-align:center;margin:0 0 28px;padding:22px 0;
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  }
+  .measure-toggle{
+    display:inline-flex;align-items:center;gap:9px;
+    background:transparent;border:1px solid var(--gold);color:var(--gold-dark);
+    padding:12px 26px;border-radius:30px;font-size:11px;letter-spacing:1.5px;
+    text-transform:uppercase;font-weight:700;
+  }
+  .measure-toggle:hover{background:var(--gold);color:#fff;}
+  .measure-toggle .sym{font-size:15px;font-weight:400;line-height:1;}
+
+  .birthday-row{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    padding:12px 0;border-bottom:1px solid var(--line);
+  }
+  .birthday-row:last-child{border-bottom:none;}
+  .birthday-row:hover .bname{color:var(--gold-dark);}
+  .birthday-row .bname{font-size:13.5px;font-weight:700;transition:color 0.15s ease;}
+  .birthday-row .bmeta{font-size:11.5px;color:var(--grey);margin-top:2px;}
+  .birthday-row .bgo{font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;}
+  .birthday-empty{font-size:12.5px;color:var(--grey);text-align:center;padding:20px 6px;}
+
+  .card-mockup{
+    background:#0A0A0A;color:#fff;padding:38px 32px;border-radius:2px;position:relative;
+  }
+  .card-mockup::before{content:'';position:absolute;inset:14px;border:1px solid var(--gold);pointer-events:none;}
+  .card-eyebrow{text-align:center;font-size:21px;letter-spacing:9px;color:var(--gold);font-weight:300;font-family:'Inter',Arial,sans-serif;}
+  .card-rule{width:56px;height:1px;background:var(--gold);margin:18px auto;}
+  .card-logo{text-align:center;font-size:26px;font-weight:800;letter-spacing:6px;color:var(--gold);}
+  .card-logo.small{font-size:18px;margin-top:8px;letter-spacing:5px;}
+  .card-message{margin-top:28px;font-size:13px;line-height:1.85;color:#E8E6E2;text-align:center;}
+  .card-message p{margin:0 0 12px;}
+  .card-closing{text-align:center;font-size:11px;letter-spacing:3px;color:var(--gold);margin-top:4px;}
+
+  .staff-summary{
+    display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;
+  }
+  .staff-summary .stat{
+    background:var(--paper);padding:10px 14px;border-radius:1px;flex:1;min-width:110px;
+  }
+  .staff-summary .stat .num{font-size:20px;font-weight:800;}
+  .staff-summary .stat .lbl{font-size:10.5px;color:var(--grey);text-transform:uppercase;letter-spacing:0.5px;}
+  .staff-block{border-bottom:1px solid var(--line);padding:11px 0;}
+  .staff-block:last-child{border-bottom:none;}
+  .staff-block-top{display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+  .staff-count{font-size:11px;color:var(--grey);margin-top:2px;}
+  .staff-edit{display:none;margin-top:12px;padding:12px;background:var(--paper);border-radius:1px;}
+  .staff-edit.show{display:block;}
+  .staff-edit .row{display:flex;gap:8px;margin-bottom:8px;align-items:center;}
+
+  .items-panel{border:1px solid var(--line);border-radius:2px;overflow:hidden;background:var(--card);}
+  .items-row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);}
+  .items-row:last-child{border-bottom:none;}
+  .items-row.head{background:var(--paper);font-size:10.5px;letter-spacing:0.5px;text-transform:uppercase;color:var(--grey);font-weight:700;}
+  .items-row input{width:100%;padding:8px 9px;font-size:13px;border:1px solid var(--line);border-radius:1px;background:var(--paper);font-family:inherit;color:var(--ink);}
+  .items-row input:focus{outline:none;border-color:var(--gold);}
+  .items-row input:disabled{background:#EAE9E6;color:var(--grey);}
+  .items-cell-meta{font-size:10px;color:var(--grey-light);margin-top:4px;line-height:1.3;}
+  .items-empty{padding:16px 12px;font-size:12.5px;color:var(--grey);text-align:center;}
+  .items-add-row{padding:12px;border-top:1px solid var(--line);background:var(--paper);}
+  @media(max-width:520px){
+    .items-row{grid-template-columns:1fr 1fr auto;gap:6px;padding:9px 8px;}
+    .items-row input{font-size:12.5px;padding:7px 7px;}
+  }
+  .item-block{padding:12px;border-bottom:1px solid var(--line);}
+  .item-block:last-child{border-bottom:none;}
+  .item-main{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:center;}
+  .item-main input{width:100%;padding:8px 9px;font-size:13px;border:1px solid var(--line);border-radius:1px;background:var(--paper);font-family:inherit;color:var(--ink);}
+  .item-main input:focus{outline:none;border-color:var(--gold);}
+  .item-main input:disabled{background:#EAE9E6;color:var(--grey);}
+  .item-sub{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;align-items:flex-end;}
+  .sub-field label{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:0.3px;color:var(--grey);margin-bottom:3px;}
+  .sub-field input,.sub-field select{padding:6px 7px;font-size:12px;border:1px solid var(--line);border-radius:1px;background:var(--paper);font-family:inherit;color:var(--ink);}
+  .sub-field input:disabled,.sub-field select:disabled{background:#EAE9E6;color:var(--grey);}
+  @media(max-width:520px){
+    .item-main{grid-template-columns:1fr 1fr auto;gap:6px;}
+    .item-main input{font-size:12.5px;padding:7px 7px;}
+    .item-sub{gap:10px;}
+  }
+  .staff-edit input{
+    flex:1;padding:8px 9px;font-size:12.5px;border:1px solid var(--line);border-radius:1px;
+    background:#fff;font-family:inherit;
+  }
+  .staff-edit input:focus{outline:none;border-color:var(--gold);}
+  .staff-edit .row button{padding:8px 12px;font-size:11px;white-space:nowrap;}
+  .staff-edit-msg{font-size:11px;color:var(--danger);margin:2px 0 8px;display:none;}
+  .staff-edit-msg.show{display:block;}
+</style>
+</head>
+<body>
+
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="brandmark">
+      <div class="name">BOSS</div>
+      <div class="sub">CRM</div>
+    </div>
+
+    <div id="signInSection">
+    <div class="login-field">
+      <label>Employee</label>
+      <select id="loginEmployee"></select>
+    </div>
+
+    <div id="accessRequestBlock" style="display:none;">
+      <p class="login-msg info show" id="accessRequestMsg"></p>
+      <button class="btn-brass" id="requestAccessBtn" style="display:none;">Request Access</button>
+    </div>
+
+    <div id="loginPasswordBlock" style="display:none;">
+      <div class="login-field">
+        <label id="pwLabel">Password</label>
+        <input type="password" id="loginPassword" placeholder="Enter your password">
+      </div>
+      <div class="login-field" id="confirmBlock" style="display:none;">
+        <label>Confirm password</label>
+        <input type="password" id="loginPasswordConfirm" placeholder="Re-enter your password">
+      </div>
+      <div class="login-msg" id="loginMsg"></div>
+      <button class="btn-brass" id="loginBtn">Continue</button>
+      <div id="forgotLinkWrap" style="text-align:center;margin-top:12px;display:none;">
+        <button class="btn-text" id="forgotLink" style="text-transform:none;">Forgot password?</button>
+      </div>
+    </div>
+
+    <div id="resetBlock" style="display:none;">
+      <div id="resetNotConfigured" style="display:none;">
+        <p style="font-size:12.5px;color:var(--danger);line-height:1.5;margin:0 0 14px;background:var(--danger-bg);padding:12px;border-left:3px solid var(--danger);">
+          Email reset isn't set up yet on this device. Please ask Richard Samaan to reset your password from Staff Access.
+        </p>
+      </div>
+      <div id="resetStep1">
+        <p style="font-size:12.5px;color:var(--grey);line-height:1.5;margin:0 0 14px;">
+          We'll email a 6-digit verification code to your registered address so you can confirm the reset.
+        </p>
+        <button class="btn-brass" id="sendCodeBtn">Send reset code</button>
+      </div>
+      <div id="resetStep2" style="display:none;">
+        <div class="login-field">
+          <label>6-digit code sent to your email</label>
+          <input type="text" id="resetCodeInput" placeholder="000000" maxlength="6">
+        </div>
+        <div class="login-field">
+          <label>New password</label>
+          <input type="password" id="resetNewPassword" placeholder="At least 4 characters">
+        </div>
+        <div class="login-field">
+          <label>Confirm new password</label>
+          <input type="password" id="resetNewPasswordConfirm" placeholder="Re-enter new password">
+        </div>
+        <div class="login-msg" id="resetMsg"></div>
+        <button class="btn-brass" id="confirmResetBtn">Reset password</button>
+      </div>
+      <div style="text-align:center;margin-top:12px;">
+        <button class="btn-text" id="cancelResetLink" style="text-transform:none;">Back to sign in</button>
+      </div>
+    </div>
+
+    <div class="login-note" id="loginNote">First time signing in? Select your name — you'll be asked to create your own password.</div>
+
+    <div style="text-align:center;margin-top:14px;">
+      <button class="btn-text" id="showSignupBtn" style="text-transform:none;">New employee? Sign up for access</button>
+    </div>
+    </div>
+
+    <div id="signupSection" style="display:none;">
+      <div class="login-field">
+        <label>Employee ID</label>
+        <input type="text" id="signupEmpId" placeholder="e.g. BH0700">
+      </div>
+      <div class="login-field">
+        <label>Full Name</label>
+        <input type="text" id="signupName" placeholder="Your full name">
+      </div>
+      <div class="login-field">
+        <label>Email (optional — needed for password reset)</label>
+        <input type="email" id="signupEmail" placeholder="you@example.com">
+      </div>
+      <div class="login-msg" id="signupMsg"></div>
+      <button class="btn-brass" id="submitSignupBtn">Submit Request</button>
+      <div style="text-align:center;margin-top:12px;">
+        <button class="btn-text" id="backToSigninBtn" style="text-transform:none;">Back to sign in</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="staffModal">
+  <div class="modal-card">
+    <div class="title">Staff Access</div>
+    <p>Master account only. See how many clients each team member has added, update their email, or set/clear their password directly.</p>
+    <div id="staffList"></div>
+    <div class="modal-close"><button class="btn-outline" id="closeStaffModal">Close</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="importModal">
+  <div class="modal-card wide">
+    <div class="title">Import Data from Excel</div>
+    <p>Master account only. Upload an .xlsx file, map its columns, review issues, then confirm before anything is added to the client book.</p>
+
+    <div class="import-steps">
+      <span class="import-step-pill" data-step-pill="1">1. Upload</span>
+      <span class="import-step-pill" data-step-pill="2">2. Preview</span>
+      <span class="import-step-pill" data-step-pill="3">3. Map Columns</span>
+      <span class="import-step-pill" data-step-pill="4">4. Validate</span>
+      <span class="import-step-pill" data-step-pill="5">5. Confirm</span>
+    </div>
+
+    <div id="importStep1">
+      <label class="import-dropzone" for="importFileInput">
+        <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:6px;">Choose an .xlsx file</div>
+        Click to browse, or drag a file here.
+      </label>
+      <input type="file" id="importFileInput" accept=".xlsx" style="display:none;">
+      <div id="importUploadMsg" class="login-msg" style="margin-top:12px;"></div>
+    </div>
+
+    <div id="importStep2" style="display:none;">
+      <div class="import-summary-stats">
+        <div class="stat"><div class="num" id="importRowCount">0</div><div class="lbl">Rows found</div></div>
+        <div class="stat"><div class="num" id="importColCount">0</div><div class="lbl">Columns found</div></div>
+      </div>
+      <div class="import-table-wrap"><table class="import-table" id="importPreviewTable"></table></div>
+    </div>
+
+    <div id="importStep3" style="display:none;">
+      <p style="margin-bottom:10px;">Match each Excel column to a BOSS CRM field. Fields marked <span class="req">*</span> are required.</p>
+      <div id="mappingRows"></div>
+      <div id="mappingWarning" class="login-msg" style="margin-top:12px;"></div>
+    </div>
+
+    <div id="importStep4" style="display:none;">
+      <div class="import-summary-stats">
+        <div class="stat ok"><div class="num" id="importValidCount">0</div><div class="lbl">Ready to import</div></div>
+        <div class="stat warn"><div class="num" id="importErrorCount">0</div><div class="lbl">Rows with errors</div></div>
+        <div class="stat"><div class="num" id="importDupCount">0</div><div class="lbl">Possible duplicates</div></div>
+      </div>
+      <div class="import-table-wrap"><table class="import-table" id="importValidationTable"></table></div>
+    </div>
+
+    <div id="importStep5" style="display:none;">
+      <div class="import-summary-stats">
+        <div class="stat ok"><div class="num" id="importReadyCount">0</div><div class="lbl">Records ready to import</div></div>
+      </div>
+      <div class="field" style="margin-bottom:14px;">
+        <label>Default action for duplicates</label>
+        <select id="dupGlobalAction">
+          <option value="skip">Skip duplicate (keep existing record)</option>
+          <option value="update">Update existing record with file data</option>
+        </select>
+      </div>
+      <div id="dupListWrap"></div>
+    </div>
+
+    <div class="import-footer">
+      <button class="btn-text" id="importBackBtn" style="display:none;">← Back</button>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-outline" id="importCancelBtn">Cancel</button>
+        <button class="btn-brass" id="importNextBtn" style="display:none;">Continue</button>
+        <button class="btn-gold" id="importConfirmBtn" style="display:none;">Import Data</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="birthdayModal">
+  <div class="modal-card">
+    <div class="title">Today's Birthdays</div>
+    <p id="birthdaySubtitle">Clients celebrating today.</p>
+    <div id="birthdayList"></div>
+    <div class="modal-close"><button class="btn-outline" id="closeBirthdayModal">Close</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="activityModal">
+  <div class="modal-card">
+    <div class="title">Customer Activity</div>
+    <p id="activitySubtitle">Clients you've added, by day.</p>
+    <div class="field" style="margin-bottom:16px;">
+      <label>Select a date</label>
+      <input type="date" id="activityDateInput">
+    </div>
+    <div id="activitySummary" style="font-size:13.5px;font-weight:700;margin-bottom:10px;"></div>
+    <div id="activityList"></div>
+    <div class="modal-close"><button class="btn-outline" id="closeActivityModal">Close</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="followupsModal">
+  <div class="modal-card wide">
+    <div class="title">Follow-ups</div>
+    <p id="followupsSubtitle">Interested items due for a follow-up.</p>
+    <div id="followupsList"></div>
+    <div class="modal-close"><button class="btn-outline" id="closeFollowupsModal">Close</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="leaderboardModal">
+  <div class="modal-card wide">
+    <div class="title">Interested Items Leaderboard</div>
+    <p>Master account only. Pick a period to see who's generating and closing the most interest.</p>
+    <div class="grid" style="margin-bottom:16px;">
+      <div class="field">
+        <label>From</label>
+        <input type="date" id="leaderboardFrom">
+      </div>
+      <div class="field">
+        <label>To</label>
+        <input type="date" id="leaderboardTo">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+      <button class="btn-text" data-lb-preset="7">Last 7 days</button>
+      <button class="btn-text" data-lb-preset="30">Last 30 days</button>
+      <button class="btn-text" data-lb-preset="90">Last 90 days</button>
+      <button class="btn-text" data-lb-preset="all">All time</button>
+    </div>
+    <div class="import-table-wrap"><table class="import-table" id="leaderboardTable"></table></div>
+    <div class="modal-close"><button class="btn-outline" id="closeLeaderboardModal">Close</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="cardModal">
+  <div class="modal-card" style="max-width:440px;padding:20px;background:transparent;box-shadow:none;">
+    <div class="card-mockup">
+      <div class="card-eyebrow">HAPPY</div>
+      <div class="card-eyebrow">BIRTHDAY</div>
+      <div class="card-rule"></div>
+      <div class="card-logo">BOSS</div>
+      <div class="card-message">
+        <p>Dear Mr. <span id="cardName"></span>,</p>
+        <p>On behalf of the BOSS Team, we would like to wish you a very Happy Birthday.</p>
+        <p>May your special day be filled with joy, success, and memorable moments.</p>
+        <p>We are delighted to celebrate this special occasion with you.</p>
+        <div class="card-rule"></div>
+        <div class="card-closing">HAPPY BIRTHDAY</div>
+        <div class="card-logo small">BOSS</div>
+      </div>
+    </div>
+    <div class="modal-close" style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn-outline" id="downloadCardBtn" style="border-color:#fff;color:#fff;">Download card</button>
+      <button class="btn-gold" id="sendWhatsappBtn">Send via WhatsApp</button>
+      <button class="btn-outline" id="closeCardModal" style="border-color:#fff;color:#fff;">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+
+  <div class="topbar">
+    <button class="btn-text" id="birthdayBtn" style="color:#D8D6D2;position:relative;display:flex;align-items:center;gap:7px;justify-self:start;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 6a2 2 0 100-4 2 2 0 000 4z"/><path d="M12 6v4"/><path d="M4 22V12a2 2 0 012-2h12a2 2 0 012 2v10"/><path d="M4 16c1.5-1.2 2.5-1.2 4 0s2.5 1.2 4 0 2.5-1.2 4 0 2.5 1.2 4 0"/><path d="M4 22h16"/></svg>
+      <span id="birthdayBadge" style="display:none;background:var(--gold);color:#fff;font-size:10px;font-weight:800;border-radius:10px;padding:1px 6px;position:absolute;top:-8px;right:-10px;"></span>
+    </button>
+    <div class="brandmark">
+      <div class="name">BOSS</div>
+      <div class="sub">CRM</div>
+    </div>
+    <div class="topactions">
+      <span class="count-pill" id="countPill">0 clients on file</span>
+      <button class="btn-text" id="myCustomersBtn" style="display:none;color:#D8D6D2;text-transform:none;">My Customers: 0</button>
+      <button class="btn-text" id="followupsBtn" style="display:none;color:#D8D6D2;text-transform:none;">Follow-ups: 0</button>
+      <span class="user-pill" id="userPill" style="display:none;"></span>
+      <button class="btn-text" id="staffAccessBtn" style="display:none;color:#D8D6D2;">Staff access</button>
+      <button class="btn-text" id="importExcelBtn" style="display:none;color:#D8D6D2;">Import Excel</button>
+      <button class="btn-text" id="leaderboardBtn" style="display:none;color:#D8D6D2;">Leaderboard</button>
+      <button class="btn-gold" id="exportBtn" style="display:none;">Download Excel</button>
+      <button class="btn-text" id="logoutBtn" style="display:none;color:#D8D6D2;">Log out</button>
+    </div>
+  </div>
+
+  <div id="loadingState" class="loading">Loading client book…</div>
+
+  <div class="config-banner" id="configBanner">
+    This device is not yet connected to the shared client database — data saved here stays on this device only and won't be visible to other staff. See setup notes to connect Firebase for real cross-device sync.
+  </div>
+
+  <div class="layout" id="mainLayout" style="display:none;">
+
+    <!-- Master: full browsing sidebar -->
+    <div class="sidebar" id="masterSidebar" style="display:none;">
+      <input type="text" class="search-input" id="searchInput" placeholder="Search name, phone, or ID">
+      <button class="btn-primary" style="width:100%;margin-bottom:14px;" id="newClientBtn">+ New client</button>
+      <div class="client-list" id="clientList"></div>
+    </div>
+
+    <!-- Staff: search-first lookup -->
+    <div class="lookup-card" id="staffLookup" style="display:none;">
+      <div class="eyebrow">Find a client</div>
+      <div class="title">Search before adding</div>
+      <p>Enter the customer's WhatsApp number or Customer ID (from POS) to check if they're already on file.</p>
+      <input type="text" id="lookupInput" placeholder="WhatsApp number or Customer ID">
+      <button class="btn-primary" style="width:100%;" id="lookupBtn">Search</button>
+      <div class="lookup-result" id="lookupResult" style="display:none;"></div>
+    </div>
+
+    <div class="panel" id="mainPanel" style="display:none;">
+
+      <div class="view-banner" id="viewBanner"></div>
+
+      <div class="tags-bar" id="tagsBar"></div>
+
+      <div class="section">
+        <div class="section-head">
+          <div class="eyebrow">01 — Client details</div>
+          <div class="title">Contact information</div>
+          <div class="ruler"></div>
+        </div>
+        <div class="grid">
+          <div class="field">
+            <label>Customer ID</label>
+            <input type="text" id="f_id" placeholder="Auto-generated">
+          </div>
+          <div class="field">
+            <label>First name <span class="req">*</span></label>
+            <input type="text" id="f_name" placeholder="First name">
+          </div>
+          <div class="field">
+            <label>Last name</label>
+            <input type="text" id="f_lastname" placeholder="Last name">
+          </div>
+          <div class="field">
+            <label>Phone number</label>
+            <div class="phone-group">
+              <select id="f_phoneCode"></select>
+              <input type="tel" id="f_phone" placeholder="3xxx xxxx">
+            </div>
+          </div>
+          <div class="field">
+            <label>WhatsApp number <span class="req">*</span></label>
+            <div class="phone-group">
+              <select id="f_whatsappCode"></select>
+              <input type="tel" id="f_whatsapp" placeholder="3xxx xxxx">
+              <button class="wa-chat-btn" id="waChatBtn" type="button" title="Open WhatsApp chat">💬</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="f_email" placeholder="name@email.com">
+          </div>
+          <div class="field">
+            <label>Nationality</label>
+            <input type="text" id="f_nationality" list="nationalities" placeholder="e.g. Bahraini">
+            <datalist id="nationalities">
+              <option value="Bahraini"><option value="Saudi"><option value="Emirati">
+              <option value="Qatari"><option value="Kuwaiti"><option value="Omani">
+              <option value="Indian"><option value="Pakistani"><option value="Filipino">
+              <option value="British"><option value="American"><option value="Egyptian">
+              <option value="Jordanian"><option value="Lebanese"><option value="Syrian">
+              <option value="Afghan"><option value="Albanian"><option value="Algerian">
+              <option value="Andorran"><option value="Angolan"><option value="Argentine">
+              <option value="Armenian"><option value="Australian"><option value="Austrian">
+              <option value="Azerbaijani"><option value="Bahamian"><option value="Bangladeshi">
+              <option value="Barbadian"><option value="Belarusian"><option value="Belgian">
+              <option value="Belizean"><option value="Beninese"><option value="Bhutanese">
+              <option value="Bolivian"><option value="Bosnian"><option value="Motswana">
+              <option value="Brazilian"><option value="Bruneian"><option value="Bulgarian">
+              <option value="Burkinabe"><option value="Burundian"><option value="Cambodian">
+              <option value="Cameroonian"><option value="Canadian"><option value="Cape Verdean">
+              <option value="Central African"><option value="Chadian"><option value="Chilean">
+              <option value="Chinese"><option value="Colombian"><option value="Comoran">
+              <option value="Congolese"><option value="Costa Rican"><option value="Ivorian">
+              <option value="Croatian"><option value="Cuban"><option value="Cypriot">
+              <option value="Czech"><option value="Danish"><option value="Djiboutian">
+              <option value="Dominican"><option value="Ecuadorian"><option value="Salvadoran">
+              <option value="Equatorial Guinean"><option value="Eritrean"><option value="Estonian">
+              <option value="Swazi"><option value="Ethiopian"><option value="Fijian">
+              <option value="Finnish"><option value="French"><option value="Gabonese">
+              <option value="Gambian"><option value="Georgian"><option value="German">
+              <option value="Ghanaian"><option value="Greek"><option value="Guatemalan">
+              <option value="Guinean"><option value="Bissau-Guinean"><option value="Guyanese">
+              <option value="Haitian"><option value="Honduran"><option value="Hong Konger">
+              <option value="Hungarian"><option value="Icelandic"><option value="Indonesian">
+              <option value="Iranian"><option value="Iraqi"><option value="Irish">
+              <option value="Israeli"><option value="Italian"><option value="Jamaican">
+              <option value="Japanese"><option value="Kazakhstani"><option value="Kenyan">
+              <option value="I-Kiribati"><option value="Kosovar"><option value="Kyrgyzstani">
+              <option value="Laotian"><option value="Latvian"><option value="Basotho">
+              <option value="Liberian"><option value="Libyan"><option value="Liechtensteiner">
+              <option value="Lithuanian"><option value="Luxembourgish"><option value="Macanese">
+              <option value="Malagasy"><option value="Malawian"><option value="Malaysian">
+              <option value="Maldivian"><option value="Malian"><option value="Maltese">
+              <option value="Mauritanian"><option value="Mauritian"><option value="Mexican">
+              <option value="Moldovan"><option value="Monacan"><option value="Mongolian">
+              <option value="Montenegrin"><option value="Moroccan"><option value="Mozambican">
+              <option value="Burmese"><option value="Namibian"><option value="Nepali">
+              <option value="Dutch"><option value="New Zealander"><option value="Nicaraguan">
+              <option value="Nigerien"><option value="Nigerian"><option value="North Korean">
+              <option value="Macedonian"><option value="Norwegian"><option value="Palauan">
+              <option value="Palestinian"><option value="Panamanian"><option value="Papua New Guinean">
+              <option value="Paraguayan"><option value="Peruvian"><option value="Polish">
+              <option value="Portuguese"><option value="Romanian"><option value="Russian">
+              <option value="Rwandan"><option value="Samoan"><option value="Sammarinese">
+              <option value="Senegalese"><option value="Serbian"><option value="Seychellois">
+              <option value="Sierra Leonean"><option value="Singaporean"><option value="Slovak">
+              <option value="Slovenian"><option value="Solomon Islander"><option value="Somali">
+              <option value="South African"><option value="South Korean"><option value="South Sudanese">
+              <option value="Spanish"><option value="Sri Lankan"><option value="Sudanese">
+              <option value="Surinamese"><option value="Swedish"><option value="Swiss">
+              <option value="Taiwanese"><option value="Tajikistani"><option value="Tanzanian">
+              <option value="Thai"><option value="Timorese"><option value="Togolese">
+              <option value="Tongan"><option value="Trinidadian"><option value="Tunisian">
+              <option value="Turkish"><option value="Turkmen"><option value="Tuvaluan">
+              <option value="Ugandan"><option value="Ukrainian"><option value="Uruguayan">
+              <option value="Uzbekistani"><option value="Vanuatuan"><option value="Vatican">
+              <option value="Venezuelan"><option value="Vietnamese"><option value="Yemeni">
+              <option value="Zambian"><option value="Zimbabwean">
+            </datalist>
+          </div>
+          <div class="field">
+            <label>Birthday</label>
+            <input type="date" id="f_birthday">
+          </div>
+        </div>
+        <div class="grid two" style="margin-top:14px;">
+          <div class="field">
+            <label>Customer preference</label>
+            <textarea id="f_preference" placeholder="Fit preference, fabric likes, occasions, brand notes..."></textarea>
+          </div>
+        </div>
+        <div class="error-msg" id="reqError">Full name and WhatsApp number are required.</div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <div class="eyebrow">02 — Ready-to-wear</div>
+          <div class="title">Customer Sizes</div>
+          <div class="ruler"></div>
+        </div>
+        <div class="grid">
+          <div class="field">
+            <label>Suit Size (IT)</label>
+            <select id="f_suitIT">
+              <option value="">—</option>
+              <option>44</option><option>46</option><option>48</option><option>50</option>
+              <option>52</option><option>54</option><option>56</option><option>58</option>
+              <option>60</option><option>62</option><option>64</option><option>66</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Trousers — Italian (IT)</label>
+            <select id="f_trouserIT">
+              <option value="">—</option>
+              <option>44</option><option>46</option><option>48</option><option>50</option>
+              <option>52</option><option>54</option><option>56</option><option>58</option>
+              <option>60</option><option>62</option><option>64</option><option>66</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Trousers — US</label>
+            <select id="f_trouserUS">
+              <option value="">—</option>
+              <option>28</option><option>29</option><option>30</option><option>31</option>
+              <option>32</option><option>33</option><option>34</option><option>35</option>
+              <option>36</option><option>37</option><option>38</option><option>39</option>
+              <option>40</option><option>42</option><option>44</option><option>46</option><option>48</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Trousers — Alphabet</label>
+            <select id="f_trouserAlpha">
+              <option value="">—</option>
+              <option>XS</option><option>S</option><option>M</option><option>L</option>
+              <option>XL</option><option>XXL</option><option>XXXL</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Top — Alphabet</label>
+            <select id="f_topAlpha">
+              <option value="">—</option>
+              <option>XS</option><option>S</option><option>M</option><option>L</option>
+              <option>XL</option><option>XXL</option><option>XXXL</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <div class="eyebrow">Wishlist</div>
+          <div class="title">Interested Items</div>
+          <div class="ruler"></div>
+        </div>
+        <div class="items-panel">
+          <div class="items-row head">
+            <div>Barcode</div>
+            <div>Interested Price (BHD)</div>
+            <div>&nbsp;</div>
+          </div>
+          <div id="itemsList"></div>
+        </div>
+        <div class="items-add-row">
+          <button class="btn-outline" id="addItemBtn" type="button">+ Add Interested Item</button>
+        </div>
+      </div>
+
+      <div class="measure-toggle-wrap">
+        <button class="measure-toggle" id="toggleMeasurementsBtn"><span class="sym" id="toggleSym">+</span> Add Tailoring Measurements &amp; Alteration Notes</button>
+      </div>
+
+      <div id="measurementsWrap" style="display:none;">
+
+      <div class="section">
+        <div class="section-head">
+          <div class="eyebrow">02 — Ready-to-wear sizes</div>
+          <div class="title">Suit, trouser &amp; top sizing</div>
+          <div class="ruler"></div>
+        </div>
+        <div class="grid">
+          <div class="field">
+            <label>Suit Size (IT)</label>
+            <select id="f_suitSizeIT"></select>
+          </div>
+          <div class="field">
+            <label>Trouser Size (IT)</label>
+            <select id="f_trouserSizeIT"></select>
+          </div>
+          <div class="field">
+            <label>Trouser Size (US)</label>
+            <select id="f_trouserSizeUS"></select>
+          </div>
+          <div class="field">
+            <label>Trouser Size (Alphabet)</label>
+            <select id="f_trouserSizeAlpha"></select>
+          </div>
+          <div class="field">
+            <label>Top Size (Alphabet)</label>
+            <select id="f_topSizeAlpha"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <div class="eyebrow">03 — Upper body</div>
+          <div class="title">Tailoring measurements (inches)</div>
+          <div class="ruler"></div>
+        </div>
+        <div class="grid" id="upperGrid"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <div class="eyebrow">04 — Bottom</div>
+          <div class="title">Tailoring measurements (inches)</div>
+          <div class="ruler"></div>
+        </div>
+        <div class="grid" id="bottomGrid"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <div class="eyebrow">05 — Notes</div>
+          <div class="title">Alteration notes</div>
+          <div class="ruler"></div>
+        </div>
+        <div class="grid two">
+          <div class="field">
+            <label>Alteration note</label>
+            <textarea id="f_alteration" placeholder="Special notes on alteration, e.g. taper leg, shorten sleeve 1cm..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      </div>
+
+
+      <div class="footer-actions">
+        <span class="id-tag" id="statusTag">New record</span>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="btn-text danger" id="deleteBtn" style="display:none;">Delete client</button>
+          <button class="btn-outline" id="clearBtn">Clear form</button>
+          <button class="btn-brass" id="saveBtn">Save client</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= SHARED CLOUD STORAGE ================= */
+/* Replace these with your own Firebase project's config (see setup notes). */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyB6cYAqVV9mPsPgQU3JMLcWpgDCvjI1GQY",
+  authDomain: "boss-crm-3e730.firebaseapp.com",
+  projectId: "boss-crm-3e730",
+  storageBucket: "boss-crm-3e730.firebasestorage.app",
+  messagingSenderId: "766383949910",
+  appId: "1:766383949910:web:c113d80b905c5f7c2553f7"
+};
+const FIREBASE_CONFIGURED = FIREBASE_CONFIG.apiKey !== 'YOUR_FIREBASE_API_KEY';
+
+let db = null;
+if(FIREBASE_CONFIGURED && window.firebase){
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.firestore();
+}
+
+/* Until Firebase is configured, falls back to this device's local storage only
+   (so the app still works for testing) — configure Firebase for real multi-device sync. */
+const storage = {
+  async get(key){
+    if(db){
+      try{
+        const doc = await db.collection('boss_bahrain_crm').doc(key).get();
+        return doc.exists ? { key, value: doc.data().value } : null;
+      }catch(e){ return null; }
+    }
+    try{
+      const v = localStorage.getItem(key);
+      return v !== null ? { key, value: v } : null;
+    }catch(e){ return null; }
+  },
+  async set(key, value){
+    if(db){
+      try{
+        await db.collection('boss_bahrain_crm').doc(key).set({ value, updatedAt: Date.now() });
+        return { key, value };
+      }catch(e){ return null; }
+    }
+    try{
+      localStorage.setItem(key, value);
+      return { key, value };
+    }catch(e){ return null; }
+  }
+};
+
+/* ================= STAFF DIRECTORY ================= */
+const STAFF_LIST = [
+  { id:'BH0486', name:'Richard Samaan', role:'master', email:'richard.samaan@jashanmalgroup.com' },
+  { id:'BH0058', name:'Sandy Garcia Bodoso', role:'staff', email:'sandz08_pogz@yahoo.com.ph' },
+  { id:'BH0432', name:'Mohamed Nabil Elhaddad', role:'staff', email:'mohamed-nabil81@hotmail.com' },
+  { id:'BH0552', name:'Rafiqul Islam', role:'staff', email:'rafiqislam0206@gmail.com' },
+  { id:'BH0586', name:'Mriem Abdulkareem Bejaoui', role:'staff', email:'myriambejaoui@gmail.com' },
+  { id:'BH0591', name:'Dima Danoun', role:'staff', email:'Dima22ddd4@gmail.com' }
+];
+
+/* ---- EmailJS config: replace these three with your own EmailJS keys ---- */
+const EMAILJS_PUBLIC_KEY  = 'g9PgLB3kBhla6gHCI';
+const EMAILJS_SERVICE_ID  = 'service_kwhgbe9';
+const EMAILJS_TEMPLATE_ID = 'template_1wpqwkm';
+const EMAIL_RESET_CONFIGURED =
+  EMAILJS_PUBLIC_KEY !== 'YOUR_EMAILJS_PUBLIC_KEY' &&
+  EMAILJS_SERVICE_ID !== 'YOUR_EMAILJS_SERVICE_ID' &&
+  EMAILJS_TEMPLATE_ID !== 'YOUR_EMAILJS_TEMPLATE_ID';
+if(EMAIL_RESET_CONFIGURED && window.emailjs){
+  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+}
+
+let staffAccounts = [];
+let currentUser = null; // {id,name,role}
+
+async function hashPassword(pw){
+  const enc = new TextEncoder().encode(pw);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function loadStaffAccounts(){
+  try{
+    const result = await storage.get('staff_accounts');
+    staffAccounts = result && result.value ? JSON.parse(result.value) : null;
+  }catch(e){
+    staffAccounts = null;
+  }
+  if(!staffAccounts){
+    staffAccounts = STAFF_LIST.map(s=>({ id:s.id, name:s.name, role:s.role, email:s.email, passwordHash:null, status:'approved', requestedAt:null, resetCode:null, resetExpiresAt:null }));
+    await persistStaffAccounts();
+  } else {
+    // Once staffAccounts exists, it is the single source of truth.
+    // We intentionally do NOT re-add STAFF_LIST entries that are missing here —
+    // doing so used to silently resurrect accounts an Admin had just removed.
+    // New employees are provisioned exclusively through the Sign Up flow now.
+    staffAccounts.forEach(a=>{
+      // migrate accounts created before the approval system existed — never lock out current staff
+      if(a.status === undefined) a.status = 'approved';
+      if(a.requestedAt === undefined) a.requestedAt = null;
+    });
+  }
+}
+
+async function persistStaffAccounts(){
+  try{
+    await storage.set('staff_accounts', JSON.stringify(staffAccounts));
+  }catch(e){
+    showToast('Could not save staff accounts — storage error.');
+  }
+}
+
+function populateLoginDropdown(){
+  const sel = document.getElementById('loginEmployee');
+  sel.innerHTML = '<option value="">Select your name…</option>' +
+    staffAccounts.map(a=>`<option value="${a.id}">${a.name} (${a.id})</option>`).join('');
+}
+
+document.getElementById('showSignupBtn').addEventListener('click', ()=>{
+  document.getElementById('signInSection').style.display = 'none';
+  document.getElementById('signupSection').style.display = 'block';
+  document.getElementById('signupEmpId').value = '';
+  document.getElementById('signupName').value = '';
+  document.getElementById('signupEmail').value = '';
+  document.getElementById('signupMsg').classList.remove('show');
+});
+document.getElementById('backToSigninBtn').addEventListener('click', ()=>{
+  document.getElementById('signupSection').style.display = 'none';
+  document.getElementById('signInSection').style.display = 'block';
+});
+
+document.getElementById('submitSignupBtn').addEventListener('click', async ()=>{
+  const msg = document.getElementById('signupMsg');
+  msg.classList.remove('show');
+
+  const empId = document.getElementById('signupEmpId').value.trim();
+  const name = document.getElementById('signupName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+
+  if(!empId || !name){
+    msg.textContent = 'Employee ID and Full Name are required.';
+    msg.classList.add('show');
+    return;
+  }
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    msg.textContent = 'That email address doesn\'t look right.';
+    msg.classList.add('show');
+    return;
+  }
+  const dup = staffAccounts.find(a=>a.id.toLowerCase()===empId.toLowerCase());
+  if(dup){
+    msg.textContent = 'This Employee ID is already registered. Select your name on the sign-in screen instead — if you believe this is a mistake, contact Admin.';
+    msg.classList.add('show');
+    return;
+  }
+
+  const btn = document.getElementById('submitSignupBtn');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+
+  staffAccounts.push({
+    id: empId, name, role: 'staff', email,
+    passwordHash: null, status: 'pending', requestedAt: new Date().toISOString(),
+    resetCode: null, resetExpiresAt: null
+  });
+  await persistStaffAccounts();
+
+  btn.disabled = false; btn.textContent = 'Submit Request';
+  populateLoginDropdown();
+
+  document.getElementById('signupSection').style.display = 'none';
+  document.getElementById('signInSection').style.display = 'block';
+  const sel = document.getElementById('loginEmployee');
+  sel.value = empId;
+  sel.dispatchEvent(new Event('change'));
+  showToast('Access request submitted. Waiting for Admin approval.');
+});
+
+document.getElementById('loginEmployee').addEventListener('change', function(){
+  const block = document.getElementById('loginPasswordBlock');
+  const confirmBlock = document.getElementById('confirmBlock');
+  const msg = document.getElementById('loginMsg');
+  const accessBlock = document.getElementById('accessRequestBlock');
+  const requestBtn = document.getElementById('requestAccessBtn');
+  msg.classList.remove('show');
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginPasswordConfirm').value = '';
+  document.getElementById('resetBlock').style.display = 'none';
+  accessBlock.style.display = 'none';
+  requestBtn.style.display = 'none';
+
+  if(!this.value){
+    block.style.display='none';
+    document.getElementById('loginNote').style.display = 'block';
+    document.getElementById('forgotLinkWrap').style.display='none';
+    return;
+  }
+  const account = staffAccounts.find(a=>a.id===this.value);
+
+  if(account.status === 'pending'){
+    block.style.display = 'none';
+    document.getElementById('loginNote').style.display = 'none';
+    accessBlock.style.display = 'block';
+    document.getElementById('accessRequestMsg').textContent =
+      'Your access request has been submitted. Please wait for Admin approval.';
+    return;
+  }
+  if(account.status !== 'approved'){
+    block.style.display = 'none';
+    document.getElementById('loginNote').style.display = 'none';
+    accessBlock.style.display = 'block';
+    document.getElementById('accessRequestMsg').textContent =
+      'No access has been created for this employee.';
+    requestBtn.style.display = 'inline-block';
+    return;
+  }
+
+  document.getElementById('loginNote').style.display = 'block';
+  block.style.display = 'block';
+  if(account.passwordHash){
+    document.getElementById('pwLabel').textContent = 'Password';
+    document.getElementById('loginPassword').placeholder = 'Enter your password';
+    confirmBlock.style.display = 'none';
+    document.getElementById('forgotLinkWrap').style.display = 'block';
+  } else {
+    document.getElementById('pwLabel').textContent = 'Create a password';
+    document.getElementById('loginPassword').placeholder = 'At least 4 characters';
+    confirmBlock.style.display = 'block';
+    document.getElementById('forgotLinkWrap').style.display = 'none';
+  }
+});
+
+document.getElementById('requestAccessBtn').addEventListener('click', async ()=>{
+  const empId = document.getElementById('loginEmployee').value;
+  const account = staffAccounts.find(a=>a.id===empId);
+  if(!account) return;
+  account.status = 'pending';
+  account.requestedAt = new Date().toISOString();
+  await persistStaffAccounts();
+  document.getElementById('accessRequestMsg').textContent =
+    'Your access request has been submitted. Please wait for Admin approval.';
+  document.getElementById('requestAccessBtn').style.display = 'none';
+});
+
+document.getElementById('loginBtn').addEventListener('click', async function(){
+  const empId = document.getElementById('loginEmployee').value;
+  const pw = document.getElementById('loginPassword').value;
+  const msg = document.getElementById('loginMsg');
+  if(!empId) return;
+  const account = staffAccounts.find(a=>a.id===empId);
+  if(!account || account.status !== 'approved') return; // safety guard — UI shouldn't allow this anyway
+
+  if(!account.passwordHash){
+    const confirmPw = document.getElementById('loginPasswordConfirm').value;
+    if(pw.length < 4){
+      msg.textContent = 'Password must be at least 4 characters.';
+      msg.classList.add('show'); return;
+    }
+    if(pw !== confirmPw){
+      msg.textContent = 'Passwords do not match.';
+      msg.classList.add('show'); return;
+    }
+    account.passwordHash = await hashPassword(pw);
+    await persistStaffAccounts();
+    signIn(account);
+    return;
+  }
+
+  const hash = await hashPassword(pw);
+  if(hash !== account.passwordHash){
+    msg.textContent = 'Incorrect password.';
+    msg.classList.add('show');
+    return;
+  }
+  signIn(account);
+});
+
+/* ---- Forgot password: email a reset code ---- */
+function genCode(){
+  return String(Math.floor(100000 + Math.random()*900000));
+}
+
+document.getElementById('forgotLink').addEventListener('click', ()=>{
+  document.getElementById('loginPasswordBlock').style.display = 'none';
+  document.getElementById('loginNote').style.display = 'none';
+  document.getElementById('resetBlock').style.display = 'block';
+  document.getElementById('resetStep2').style.display = 'none';
+  if(EMAIL_RESET_CONFIGURED){
+    document.getElementById('resetNotConfigured').style.display = 'none';
+    document.getElementById('resetStep1').style.display = 'block';
+  } else {
+    document.getElementById('resetNotConfigured').style.display = 'block';
+    document.getElementById('resetStep1').style.display = 'none';
+  }
+});
+document.getElementById('cancelResetLink').addEventListener('click', ()=>{
+  document.getElementById('resetBlock').style.display = 'none';
+  document.getElementById('loginPasswordBlock').style.display = 'block';
+  document.getElementById('loginNote').style.display = 'block';
+});
+
+document.getElementById('sendCodeBtn').addEventListener('click', async ()=>{
+  const empId = document.getElementById('loginEmployee').value;
+  const account = staffAccounts.find(a=>a.id===empId);
+  if(!account) return;
+  if(!account.email){
+    showToast('No email on file for this account. Ask Richard to reset it manually.');
+    return;
+  }
+  if(!EMAIL_RESET_CONFIGURED){
+    showToast('Email reset isn\'t set up yet. Ask Richard to reset your password in Staff Access.');
+    return;
+  }
+  const code = genCode();
+  account.resetCode = code;
+  account.resetExpiresAt = Date.now() + 15*60*1000; // 15 minutes
+  await persistStaffAccounts();
+
+  const btn = document.getElementById('sendCodeBtn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try{
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email: account.email,
+      to_name: account.name,
+      code: code
+    });
+    showToast('Reset code sent to your email.');
+    document.getElementById('resetStep1').style.display = 'none';
+    document.getElementById('resetStep2').style.display = 'block';
+  }catch(e){
+    showToast('Could not send the email. Check EmailJS setup.');
+  }
+  btn.disabled = false; btn.textContent = 'Send reset code';
+});
+
+document.getElementById('confirmResetBtn').addEventListener('click', async ()=>{
+  const empId = document.getElementById('loginEmployee').value;
+  const account = staffAccounts.find(a=>a.id===empId);
+  const msg = document.getElementById('resetMsg');
+  const code = document.getElementById('resetCodeInput').value.trim();
+  const pw = document.getElementById('resetNewPassword').value;
+  const confirmPw = document.getElementById('resetNewPasswordConfirm').value;
+
+  if(!account.resetCode || Date.now() > (account.resetExpiresAt||0)){
+    msg.textContent = 'This code has expired. Send a new one.';
+    msg.classList.add('show'); return;
+  }
+  if(code !== account.resetCode){
+    msg.textContent = 'Incorrect code.';
+    msg.classList.add('show'); return;
+  }
+  if(pw.length < 4){
+    msg.textContent = 'Password must be at least 4 characters.';
+    msg.classList.add('show'); return;
+  }
+  if(pw !== confirmPw){
+    msg.textContent = 'Passwords do not match.';
+    msg.classList.add('show'); return;
+  }
+
+  account.passwordHash = await hashPassword(pw);
+  account.resetCode = null;
+  account.resetExpiresAt = null;
+  await persistStaffAccounts();
+  showToast('Password reset. Signing you in…');
+  document.getElementById('resetBlock').style.display = 'none';
+  signIn(account);
+});
+
+function signIn(account){
+  currentUser = { id: account.id, name: account.name, role: account.role };
+  document.getElementById('loginOverlay').style.display = 'none';
+  const pill = document.getElementById('userPill');
+  pill.style.display = 'flex';
+  pill.innerHTML = currentUser.name + ' <span class="role">' + currentUser.role + '</span>';
+  document.getElementById('logoutBtn').style.display = 'inline';
+
+  if(currentUser.role === 'master'){
+    document.getElementById('masterSidebar').style.display = 'block';
+    document.getElementById('staffLookup').style.display = 'none';
+    document.getElementById('exportBtn').style.display = 'inline';
+    document.getElementById('staffAccessBtn').style.display = 'inline';
+    document.getElementById('importExcelBtn').style.display = 'inline';
+    document.getElementById('leaderboardBtn').style.display = 'inline';
+    document.getElementById('mainPanel').style.display = 'block';
+    renderList();
+    resetForm();
+  } else {
+    document.getElementById('masterSidebar').style.display = 'none';
+    document.getElementById('staffLookup').style.display = 'block';
+    document.getElementById('exportBtn').style.display = 'none';
+    document.getElementById('staffAccessBtn').style.display = 'none';
+    document.getElementById('importExcelBtn').style.display = 'none';
+    document.getElementById('leaderboardBtn').style.display = 'none';
+    document.getElementById('mainPanel').style.display = 'none';
+  }
+  document.getElementById('countPill').textContent =
+    customers.length + (customers.length===1 ? ' client on file' : ' clients on file');
+  updateBirthdayBadge();
+  updateMyCustomersPill();
+  updateFollowupsPill();
+  maybeAutoShowBirthdays();
+}
+
+function updateMyCustomersPill(){
+  const btn = document.getElementById('myCustomersBtn');
+  if(!currentUser){ btn.style.display = 'none'; return; }
+  const mine = customers.filter(c=>c.createdById===currentUser.id).length;
+  btn.textContent = 'My Customers: ' + mine;
+  btn.style.display = 'inline';
+}
+
+document.getElementById('logoutBtn').addEventListener('click', function(){
+  currentUser = null;
+  document.getElementById('loginEmployee').value = '';
+  document.getElementById('loginPasswordBlock').style.display = 'none';
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('userPill').style.display = 'none';
+  document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('myCustomersBtn').style.display = 'none';
+  document.getElementById('followupsBtn').style.display = 'none';
+  document.getElementById('staffAccessBtn').style.display = 'none';
+  document.getElementById('importExcelBtn').style.display = 'none';
+  document.getElementById('leaderboardBtn').style.display = 'none';
+  document.getElementById('exportBtn').style.display = 'none';
+  document.getElementById('mainPanel').style.display = 'none';
+  document.getElementById('staffLookup').style.display = 'none';
+  document.getElementById('masterSidebar').style.display = 'none';
+  document.getElementById('lookupResult').style.display = 'none';
+  document.getElementById('lookupInput').value = '';
+});
+
+/* ---- Staff access management (master only) ---- */
+document.getElementById('staffAccessBtn').addEventListener('click', renderStaffModal);
+document.getElementById('closeStaffModal').addEventListener('click', ()=>{
+  document.getElementById('staffModal').classList.remove('show');
+});
+function renderStaffModal(){
+  const list = document.getElementById('staffList');
+
+  const countFor = id => customers.filter(c=>c.createdById===id).length;
+  const totalTracked = staffAccounts.reduce((sum,a)=> sum + countFor(a.id), 0);
+  const activeCount = staffAccounts.filter(a=>a.passwordHash).length;
+  const pending = staffAccounts.filter(a=>a.status==='pending');
+
+  const summaryHtml = `
+    <div class="staff-summary">
+      <div class="stat"><div class="num">${customers.length}</div><div class="lbl">Total clients</div></div>
+      <div class="stat"><div class="num">${activeCount}/${staffAccounts.length}</div><div class="lbl">Accounts activated</div></div>
+      <div class="stat"><div class="num">${totalTracked}</div><div class="lbl">Attributed to staff</div></div>
+    </div>
+  `;
+
+  const requestsHtml = pending.length === 0 ? '' : `
+    <div class="section-head" style="margin-top:6px;">
+      <div class="eyebrow">Pending</div>
+      <div class="title">Staff Access Requests</div>
+      <div class="ruler"></div>
+    </div>
+    ${pending.map(a=>`
+      <div class="staff-row">
+        <div class="info">
+          <div class="n">${a.name}</div>
+          <div class="i">${a.id} · requested ${a.requestedAt ? new Date(a.requestedAt).toLocaleString() : ''}</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-outline" data-approve-req="${a.id}">Approve</button>
+          <button class="btn-text danger" data-reject-req="${a.id}">Reject</button>
+        </div>
+      </div>
+    `).join('')}
+    <div style="margin:20px 0 4px;border-top:1px solid var(--line);"></div>
+  `;
+
+  const rowsHtml = staffAccounts.map(a=>{
+    let statusLabel, statusClass;
+    if(a.passwordHash){ statusLabel = 'Active'; statusClass = 'active'; }
+    else if(a.status === 'approved'){ statusLabel = 'Approved · no password yet'; statusClass = 'pending'; }
+    else if(a.status === 'pending'){ statusLabel = 'Request pending'; statusClass = 'pending'; }
+    else { statusLabel = 'No access requested'; statusClass = 'pending'; }
+    return `
+    <div class="staff-block">
+      <div class="staff-block-top" data-toggle="${a.id}">
+        <div class="info">
+          <div class="n">${a.name} ${a.role==='master' ? '(Master)' : ''}</div>
+          <div class="i">${a.id} · ${a.email||'no email on file'}</div>
+          <div class="staff-count">${countFor(a.id)} client${countFor(a.id)===1?'':'s'} added</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="staff-status ${statusClass}">${statusLabel}</span>
+          <button class="btn-text" data-toggle-btn="${a.id}">Manage</button>
+        </div>
+      </div>
+      <div class="staff-edit" id="edit-${a.id}">
+        <div class="staff-edit-msg" id="editmsg-${a.id}"></div>
+        <div class="row">
+          <input type="email" id="email-${a.id}" value="${a.email||''}" placeholder="Email address">
+          <button class="btn-outline" data-save-email="${a.id}">Save email</button>
+        </div>
+        <div class="row">
+          <input type="password" id="pw-${a.id}" placeholder="New password (min 4 chars)">
+          <input type="password" id="pwconfirm-${a.id}" placeholder="Confirm">
+          <button class="btn-outline" data-set-pw="${a.id}">Set password</button>
+        </div>
+        ${a.passwordHash ? `<div class="row"><button class="btn-text danger" data-clear-pw="${a.id}">Clear password (force re-activation)</button></div>` : ''}
+        ${a.status !== 'approved' ? `<div class="row"><button class="btn-outline" data-force-approve="${a.id}">Approve access now</button></div>` : ''}
+        ${a.role !== 'master' ? `<div class="row"><button class="btn-text danger" data-remove-access="${a.id}">Remove access — delete this account</button></div>` : ''}
+      </div>
+    </div>
+  `;}).join('');
+
+  list.innerHTML = summaryHtml + requestsHtml + rowsHtml;
+
+  list.querySelectorAll('[data-approve-req]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const acc = staffAccounts.find(a=>a.id===btn.dataset.approveReq);
+      acc.status = 'approved';
+      await persistStaffAccounts();
+      showToast(acc.name + ' approved. They can now create a password at login.');
+      renderStaffModal();
+    });
+  });
+  list.querySelectorAll('[data-reject-req]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const acc = staffAccounts.find(a=>a.id===btn.dataset.rejectReq);
+      if(!confirm(`Reject the access request from ${acc.name}?`)) return;
+      acc.status = null;
+      acc.requestedAt = null;
+      await persistStaffAccounts();
+      showToast('Request rejected.');
+      renderStaffModal();
+    });
+  });
+  list.querySelectorAll('[data-force-approve]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const acc = staffAccounts.find(a=>a.id===btn.dataset.forceApprove);
+      acc.status = 'approved';
+      await persistStaffAccounts();
+      showToast(acc.name + ' approved.');
+      renderStaffModal();
+    });
+  });
+
+  list.querySelectorAll('[data-remove-access]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const acc = staffAccounts.find(a=>a.id===btn.dataset.removeAccess);
+      const clientCount = customers.filter(c=>c.createdById===acc.id).length;
+      const warn = clientCount > 0
+        ? ` They previously added ${clientCount} client record${clientCount===1?'':'s'} — those records will NOT be deleted, but will stay attributed to them.`
+        : '';
+      if(!confirm(`Remove access for ${acc.name} (${acc.id})? They will be logged out on their next visit and will need to sign up again to regain access.${warn}`)) return;
+      staffAccounts = staffAccounts.filter(a=>a.id!==acc.id);
+      await persistStaffAccounts();
+      showToast(`Access removed for ${acc.name}.`);
+      renderStaffModal();
+    });
+  });
+
+  list.querySelectorAll('[data-toggle-btn]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.getElementById('edit-'+btn.dataset.toggleBtn).classList.toggle('show');
+    });
+  });
+
+  list.querySelectorAll('[data-save-email]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.dataset.saveEmail;
+      const acc = staffAccounts.find(a=>a.id===id);
+      const val = document.getElementById('email-'+id).value.trim();
+      const msg = document.getElementById('editmsg-'+id);
+      if(!val || !val.includes('@')){
+        msg.textContent = 'Enter a valid email address.'; msg.classList.add('show'); return;
+      }
+      msg.classList.remove('show');
+      acc.email = val;
+      await persistStaffAccounts();
+      showToast('Email updated for ' + acc.name + '.');
+      renderStaffModal();
+    });
+  });
+
+  list.querySelectorAll('[data-set-pw]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.dataset.setPw;
+      const acc = staffAccounts.find(a=>a.id===id);
+      const pw = document.getElementById('pw-'+id).value;
+      const confirmPw = document.getElementById('pwconfirm-'+id).value;
+      const msg = document.getElementById('editmsg-'+id);
+      if(pw.length < 4){ msg.textContent = 'Password must be at least 4 characters.'; msg.classList.add('show'); return; }
+      if(pw !== confirmPw){ msg.textContent = 'Passwords do not match.'; msg.classList.add('show'); return; }
+      msg.classList.remove('show');
+      acc.passwordHash = await hashPassword(pw);
+      acc.resetCode = null; acc.resetExpiresAt = null;
+      await persistStaffAccounts();
+      showToast('Password set for ' + acc.name + '.');
+      renderStaffModal();
+    });
+  });
+
+  list.querySelectorAll('[data-clear-pw]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const acc = staffAccounts.find(a=>a.id===btn.dataset.clearPw);
+      if(!confirm(`Clear the password for ${acc.name}? They'll set a new one at next sign-in.`)) return;
+      acc.passwordHash = null;
+      await persistStaffAccounts();
+      renderStaffModal();
+      showToast('Password cleared.');
+    });
+  });
+
+  document.getElementById('staffModal').classList.add('show');
+}
+
+/* ================= EXCEL IMPORT WIZARD (master only) ================= */
+const CRM_IMPORT_FIELDS = [
+  { key:'id', label:'Customer ID', required:false },
+  { key:'name', label:'First Name', required:true },
+  { key:'lastName', label:'Last Name', required:false },
+  { key:'phoneCode', label:'Phone Country Code', required:false },
+  { key:'phoneNumber', label:'Phone Number', required:false },
+  { key:'whatsappCode', label:'WhatsApp Country Code', required:false },
+  { key:'whatsappNumber', label:'WhatsApp Number', required:true },
+  { key:'email', label:'Email', required:false },
+  { key:'nationality', label:'Nationality', required:false },
+  { key:'birthday', label:'Birthday', required:false },
+  { key:'suitSizeIT', label:'Suit Size (IT)', required:false },
+  { key:'trouserSizeIT', label:'Trouser Size (IT)', required:false },
+  { key:'trouserSizeUS', label:'Trouser Size (US)', required:false },
+  { key:'trouserSizeAlpha', label:'Trouser Size (Alphabet)', required:false },
+  { key:'topSizeAlpha', label:'Top Size (Alphabet)', required:false },
+  { key:'alterationNote', label:'Alteration Note', required:false },
+  { key:'preference', label:'Customer Preference', required:false }
+];
+
+let importState = {
+  step: 1,
+  headers: [],
+  rows: [],       // raw parsed rows (array of objects keyed by header)
+  mapping: {},     // crmFieldKey -> header
+  validated: []    // [{rowIndex, record, errors:[], isDuplicate, duplicateOf, action}]
+};
+
+function resetImportWizard(){
+  importState = { step: 1, headers: [], rows: [], mapping: {}, validated: [] };
+  document.getElementById('importFileInput').value = '';
+  document.getElementById('importUploadMsg').classList.remove('show');
+  document.getElementById('importUploadMsg').textContent = '';
+  goToImportStep(1);
+}
+
+function goToImportStep(n){
+  importState.step = n;
+  [1,2,3,4,5].forEach(s=>{
+    document.getElementById('importStep'+s).style.display = (s===n) ? 'block' : 'none';
+    const pill = document.querySelector(`[data-step-pill="${s}"]`);
+    pill.classList.toggle('active', s===n);
+    pill.classList.toggle('done', s<n);
+  });
+  document.getElementById('importBackBtn').style.display = n>1 ? 'inline' : 'none';
+  document.getElementById('importNextBtn').style.display = (n>=2 && n<=3) ? 'inline' : 'none';
+  document.getElementById('importConfirmBtn').style.display = (n===5) ? 'inline' : 'none';
+
+  const nextBtn = document.getElementById('importNextBtn');
+  if(n===2) nextBtn.textContent = 'Continue to Column Mapping →';
+  if(n===3) nextBtn.textContent = 'Validate Data →';
+  if(n===4) { nextBtn.style.display='inline'; nextBtn.textContent = 'Continue to Confirm →'; }
+}
+
+document.getElementById('importExcelBtn').addEventListener('click', ()=>{
+  resetImportWizard();
+  document.getElementById('importModal').classList.add('show');
+});
+document.getElementById('importCancelBtn').addEventListener('click', ()=>{
+  document.getElementById('importModal').classList.remove('show');
+});
+
+document.getElementById('importFileInput').addEventListener('change', function(){
+  const file = this.files[0];
+  if(!file) return;
+  const msg = document.getElementById('importUploadMsg');
+  msg.classList.remove('show');
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type:'array', cellDates:true });
+      const sheetName = wb.SheetNames[0];
+      const sheet = wb.Sheets[sheetName];
+      const headerRow = XLSX.utils.sheet_to_json(sheet, { header:1, defval:'' })[0] || [];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval:'' });
+      if(rows.length === 0){
+        msg.textContent = 'No data rows found in the first sheet.';
+        msg.classList.add('show');
+        return;
+      }
+      importState.headers = headerRow.filter(h=>h!=='' && h!=null).map(h=>String(h));
+      importState.rows = rows;
+      renderPreviewStep();
+      guessMapping();
+      goToImportStep(2);
+    }catch(err){
+      msg.textContent = 'Could not read this file. Make sure it is a valid .xlsx file.';
+      msg.classList.add('show');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+function renderPreviewStep(){
+  document.getElementById('importRowCount').textContent = importState.rows.length;
+  document.getElementById('importColCount').textContent = importState.headers.length;
+  const table = document.getElementById('importPreviewTable');
+  const sample = importState.rows.slice(0, 6);
+  const theadHtml = '<tr>' + importState.headers.map(h=>`<th>${h}</th>`).join('') + '</tr>';
+  const bodyHtml = sample.map(r=>'<tr>' + importState.headers.map(h=>`<td>${(r[h]!=null && r[h]!=='') ? r[h] : '—'}</td>`).join('') + '</tr>').join('');
+  table.innerHTML = `<thead>${theadHtml}</thead><tbody>${bodyHtml}</tbody>`;
+}
+
+function guessMapping(){
+  const norm = s => String(s||'').toLowerCase().replace(/[^a-z]/g,'');
+  const guesses = {
+    id: ['customerid','id','clientid'],
+    name: ['firstname','name','customername'],
+    lastName: ['lastname','surname'],
+    phoneCode: ['phonecountrycode','phonecode'],
+    phoneNumber: ['phonenumber','phone'],
+    whatsappCode: ['whatsappcountrycode','whatsappcode'],
+    whatsappNumber: ['whatsappnumber','whatsapp'],
+    email: ['email','emailaddress'],
+    nationality: ['nationality'],
+    birthday: ['birthday','dateofbirth','dob'],
+    suitSizeIT: ['suitsizeit','suitsize'],
+    trouserSizeIT: ['trousersizeit'],
+    trouserSizeUS: ['trousersizeus'],
+    trouserSizeAlpha: ['trousersizealphabet','trousersizealpha'],
+    topSizeAlpha: ['topsizealphabet','topsizealpha'],
+    alterationNote: ['alterationnote','alteration'],
+    preference: ['customerpreference','preference']
+  };
+  importState.mapping = {};
+  CRM_IMPORT_FIELDS.forEach(f=>{
+    const candidates = guesses[f.key] || [];
+    const match = importState.headers.find(h => candidates.includes(norm(h)));
+    if(match) importState.mapping[f.key] = match;
+  });
+  renderMappingStep();
+}
+
+function renderMappingStep(){
+  const wrap = document.getElementById('mappingRows');
+  wrap.innerHTML = CRM_IMPORT_FIELDS.map(f=>{
+    const options = ['<option value="">— Not mapped —</option>']
+      .concat(importState.headers.map(h=>`<option value="${h}" ${importState.mapping[f.key]===h?'selected':''}>${h}</option>`))
+      .join('');
+    return `
+      <div class="map-row">
+        <div class="field-name">${f.label}${f.required ? ' <span class="req">*</span>' : ''}</div>
+        <div class="map-arrow">→</div>
+        <select data-map-field="${f.key}">${options}</select>
+      </div>
+    `;
+  }).join('');
+  wrap.querySelectorAll('[data-map-field]').forEach(sel=>{
+    sel.addEventListener('change', function(){
+      if(this.value) importState.mapping[this.dataset.mapField] = this.value;
+      else delete importState.mapping[this.dataset.mapField];
+    });
+  });
+}
+
+function parseImportedBirthday(val){
+  if(val === '' || val == null) return '';
+  if(val instanceof Date && !isNaN(val)) return toLocalDateStr(val);
+  const s = String(val).trim();
+  let m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if(m) return s;
+  m = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/.exec(s);
+  if(m){
+    const day = m[1].padStart(2,'0'), mon = m[2].padStart(2,'0');
+    return `${m[3]}-${mon}-${day}`;
+  }
+  const d = new Date(s);
+  if(!isNaN(d)) return toLocalDateStr(d);
+  return null; // unparseable
+}
+
+function runImportValidation(){
+  const missingRequired = CRM_IMPORT_FIELDS.filter(f=>f.required && !importState.mapping[f.key]);
+  document.getElementById('mappingWarning').classList.toggle('show', missingRequired.length>0);
+  if(missingRequired.length>0){
+    document.getElementById('mappingWarning').textContent =
+      'Map these required fields before validating: ' + missingRequired.map(f=>f.label).join(', ') + '.';
+    return false;
+  }
+
+  const seenIdsInFile = new Map();
+  const existingById = new Map(customers.map(c=>[c.id, c]));
+  const existingByWhatsapp = new Map(customers.map(c=>[(c.whatsappNumber||'').replace(/\D/g,''), c]));
+
+  importState.validated = importState.rows.map((row, idx)=>{
+    const record = {};
+    CRM_IMPORT_FIELDS.forEach(f=>{
+      const header = importState.mapping[f.key];
+      let v = header ? row[header] : '';
+      if(v == null) v = '';
+      record[f.key] = (typeof v === 'string') ? v.trim() : v;
+    });
+
+    const errors = [];
+    if(!record.name) errors.push('Missing First Name');
+    if(!record.whatsappNumber) errors.push('Missing WhatsApp Number');
+
+    let birthdayParsed = '';
+    if(record.birthday !== ''){
+      const parsed = parseImportedBirthday(record.birthday);
+      if(parsed === null) errors.push('Invalid Birthday format');
+      else birthdayParsed = parsed;
+    }
+    record.birthday = birthdayParsed;
+
+    if(record.id){
+      if(seenIdsInFile.has(record.id)) errors.push('Duplicate Customer ID within file');
+      else seenIdsInFile.set(record.id, idx);
+    }
+
+    let isDuplicate = false, duplicateOf = null;
+    if(record.id && existingById.has(record.id)){
+      isDuplicate = true; duplicateOf = existingById.get(record.id);
+    } else {
+      const waKey = (record.whatsappNumber||'').replace(/\D/g,'');
+      if(waKey && existingByWhatsapp.has(waKey)){
+        isDuplicate = true; duplicateOf = existingByWhatsapp.get(waKey);
+      }
+    }
+
+    return { rowIndex: idx, record, errors, isDuplicate, duplicateOf, action: 'skip' };
+  });
+
+  return true;
+}
+
+function renderValidationStep(){
+  const valid = importState.validated.filter(r=>r.errors.length===0);
+  const errorRows = importState.validated.filter(r=>r.errors.length>0);
+  const dups = valid.filter(r=>r.isDuplicate);
+
+  document.getElementById('importValidCount').textContent = valid.length;
+  document.getElementById('importErrorCount').textContent = errorRows.length;
+  document.getElementById('importDupCount').textContent = dups.length;
+
+  const table = document.getElementById('importValidationTable');
+  const shown = importState.validated.slice(0, 200);
+  const rowsHtml = shown.map(r=>{
+    const cls = r.errors.length ? 'error-row' : (r.isDuplicate ? 'dup-row' : '');
+    const status = r.errors.length ? r.errors.join('; ') : (r.isDuplicate ? 'Possible duplicate (matches ' + (r.duplicateOf.id) + ')' : 'Ready');
+    return `<tr class="${cls}"><td>${r.rowIndex+2}</td><td>${r.record.name||''} ${r.record.lastName||''}</td><td>${r.record.whatsappNumber||''}</td><td>${status}</td></tr>`;
+  }).join('');
+  const moreNote = importState.validated.length > 200 ? `<tr><td colspan="4" style="text-align:center;color:var(--grey);">+ ${importState.validated.length-200} more rows not shown</td></tr>` : '';
+  table.innerHTML = `<thead><tr><th>Excel Row</th><th>Name</th><th>WhatsApp</th><th>Status</th></tr></thead><tbody>${rowsHtml}${moreNote}</tbody>`;
+}
+
+function renderConfirmStep(){
+  const importable = importState.validated.filter(r=>r.errors.length===0);
+  document.getElementById('importReadyCount').textContent = importable.length;
+
+  const dups = importable.filter(r=>r.isDuplicate);
+  const dupWrap = document.getElementById('dupListWrap');
+  if(dups.length===0){
+    dupWrap.innerHTML = '<div class="items-empty">No duplicates found — every record will be added as new.</div>';
+  } else {
+    dupWrap.innerHTML = dups.map((r,i)=>`
+      <div class="staff-row">
+        <div class="info">
+          <div class="n">${r.record.name} ${r.record.lastName||''}</div>
+          <div class="i">Matches existing ${r.duplicateOf.id} — ${r.duplicateOf.name} ${r.duplicateOf.lastName||''}</div>
+        </div>
+        <select class="dup-action-select" data-dup-row="${r.rowIndex}">
+          <option value="skip">Skip (keep existing)</option>
+          <option value="update">Update existing</option>
+        </select>
+      </div>
+    `).join('');
+    dupWrap.querySelectorAll('[data-dup-row]').forEach(sel=>{
+      sel.addEventListener('change', function(){
+        const row = importState.validated.find(r=>r.rowIndex===parseInt(this.dataset.dupRow,10));
+        if(row) row.action = this.value;
+      });
+    });
+  }
+}
+
+document.getElementById('dupGlobalAction').addEventListener('change', function(){
+  const val = this.value;
+  importState.validated.forEach(r=>{ if(r.isDuplicate) r.action = val; });
+  renderConfirmStep();
+});
+
+document.getElementById('importBackBtn').addEventListener('click', ()=>{
+  if(importState.step > 1) goToImportStep(importState.step - 1);
+});
+
+document.getElementById('importNextBtn').addEventListener('click', ()=>{
+  if(importState.step === 2){
+    goToImportStep(3);
+  } else if(importState.step === 3){
+    const ok = runImportValidation();
+    if(!ok) return;
+    renderValidationStep();
+    goToImportStep(4);
+  } else if(importState.step === 4){
+    renderConfirmStep();
+    goToImportStep(5);
+  }
+});
+
+document.getElementById('importConfirmBtn').addEventListener('click', async ()=>{
+  const importable = importState.validated.filter(r=>r.errors.length===0);
+  const btn = document.getElementById('importConfirmBtn');
+  btn.disabled = true; btn.textContent = 'Importing…';
+
+  let added = 0, updated = 0, skipped = 0;
+  let idCounter = null;
+
+  importable.forEach(r=>{
+    const rec = r.record;
+    if(r.isDuplicate && r.action === 'skip'){
+      skipped++;
+      return;
+    }
+    if(r.isDuplicate && r.action === 'update'){
+      const existing = customers.find(c=>c.id===r.duplicateOf.id);
+      if(existing){
+        Object.assign(existing, {
+          name: rec.name || existing.name,
+          lastName: rec.lastName || existing.lastName,
+          phoneCode: rec.phoneCode || existing.phoneCode,
+          phoneNumber: rec.phoneNumber || existing.phoneNumber,
+          phone: rec.phoneNumber ? ((rec.phoneCode||existing.phoneCode||'') + ' ' + rec.phoneNumber) : existing.phone,
+          whatsappCode: rec.whatsappCode || existing.whatsappCode,
+          whatsappNumber: rec.whatsappNumber || existing.whatsappNumber,
+          whatsapp: rec.whatsappNumber ? ((rec.whatsappCode||existing.whatsappCode||'') + ' ' + rec.whatsappNumber) : existing.whatsapp,
+          email: rec.email || existing.email,
+          nationality: rec.nationality || existing.nationality,
+          birthday: rec.birthday || existing.birthday,
+          suitSizeIT: rec.suitSizeIT || existing.suitSizeIT,
+          trouserSizeIT: rec.trouserSizeIT || existing.trouserSizeIT,
+          trouserSizeUS: rec.trouserSizeUS || existing.trouserSizeUS,
+          trouserSizeAlpha: rec.trouserSizeAlpha || existing.trouserSizeAlpha,
+          topSizeAlpha: rec.topSizeAlpha || existing.topSizeAlpha,
+          alterationNote: rec.alterationNote || existing.alterationNote,
+          preference: rec.preference || existing.preference,
+          updatedAt: new Date().toISOString()
+        });
+        updated++;
+      }
+      return;
+    }
+    // new record
+    let id = rec.id;
+    if(!id || customers.some(c=>c.id===id)){
+      if(idCounter === null){
+        let max = 0;
+        customers.forEach(c=>{ const m=/^BOSS-(\d+)$/.exec(c.id||''); if(m) max=Math.max(max,parseInt(m[1],10)); });
+        idCounter = max;
+      }
+      idCounter++;
+      id = 'BOSS-' + String(idCounter).padStart(4,'0');
+    }
+    const now = new Date().toISOString();
+    customers.push({
+      id,
+      name: rec.name, lastName: rec.lastName || '',
+      phoneCode: rec.phoneCode || '+973', phoneNumber: rec.phoneNumber || '',
+      phone: rec.phoneNumber ? ((rec.phoneCode||'+973') + ' ' + rec.phoneNumber) : '',
+      whatsappCode: rec.whatsappCode || '+973', whatsappNumber: rec.whatsappNumber || '',
+      whatsapp: (rec.whatsappCode||'+973') + ' ' + (rec.whatsappNumber||''),
+      email: rec.email || '', nationality: rec.nationality || '', birthday: rec.birthday || '',
+      suitSizeIT: rec.suitSizeIT || '', trouserSizeIT: rec.trouserSizeIT || '',
+      trouserSizeUS: rec.trouserSizeUS || '', trouserSizeAlpha: rec.trouserSizeAlpha || '',
+      topSizeAlpha: rec.topSizeAlpha || '',
+      measurements: {}, alterationNote: rec.alterationNote || '', preference: rec.preference || '',
+      interestedItems: [],
+      createdById: currentUser.id, createdByName: currentUser.name,
+      createdAt: now, updatedAt: now
+    });
+    added++;
+  });
+
+  const ok = await persist();
+  btn.disabled = false; btn.textContent = 'Import Data';
+  if(ok){
+    showToast(`Import complete — ${added} added, ${updated} updated, ${skipped} skipped.`);
+    document.getElementById('importModal').classList.remove('show');
+    renderList();
+    updateBirthdayBadge();
+    updateMyCustomersPill();
+    updateFollowupsPill();
+    document.getElementById('countPill').textContent =
+      customers.length + (customers.length===1 ? ' client on file' : ' clients on file');
+  } else {
+    showToast('Import failed to save — please try again.');
+  }
+});
+
+/* ================= MEASUREMENT FIELDS ================= */
+const UPPER_FIELDS = [
+  ['upperNeck','Neck'],['upperShoulder','Shoulder'],['upperChest','Chest'],
+  ['upperWaist','Waist'],['upperHip','Hip'],['upperSleeve','Sleeve length'],
+  ['upperBicep','Bicep'],['upperWrist','Wrist'],['upperJacketLength','Jacket length']
+];
+const BOTTOM_FIELDS = [
+  ['bottomWaist','Waist'],['bottomHip','Hip'],['bottomThigh','Thigh'],
+  ['bottomKnee','Knee'],['bottomWidth','Bottom width'],['bottomInseam','Inseam (inside leg)'],
+  ['bottomOutseam','Outseam (outside leg)'],['bottomTrouserLength','Trouser length']
+];
+
+function buildMeasureGrid(containerId, fields){
+  const el = document.getElementById(containerId);
+  el.innerHTML = fields.map(([key,label]) => `
+    <div class="field measure">
+      <label>${label}</label>
+      <div class="inch"><input type="number" step="0.1" id="m_${key}" placeholder="0.0"></div>
+    </div>
+  `).join('');
+}
+buildMeasureGrid('upperGrid', UPPER_FIELDS);
+
+/* ================= READY-TO-WEAR SIZES ================= */
+const SUIT_IT_SIZES = [44,46,48,50,52,54,56,58,60,62];
+const TROUSER_IT_SIZES = [44,46,48,50,52,54,56,58,60,62];
+const TROUSER_US_SIZES = Array.from({length: 48-28+1}, (_,i)=> 28+i); // 28–48
+const ALPHA_SIZES = ['XS','S','M','L','XL','XXL','XXXL'];
+
+function buildSizeSelect(select, values, suffix){
+  select.innerHTML = '<option value="">—</option>' +
+    values.map(v => `<option value="${v}">${v}${suffix ? ' '+suffix : ''}</option>`).join('');
+}
+buildSizeSelect(document.getElementById('f_suitSizeIT'), SUIT_IT_SIZES, 'IT');
+buildSizeSelect(document.getElementById('f_trouserSizeIT'), TROUSER_IT_SIZES, 'IT');
+buildSizeSelect(document.getElementById('f_trouserSizeUS'), TROUSER_US_SIZES, 'US');
+buildSizeSelect(document.getElementById('f_trouserSizeAlpha'), ALPHA_SIZES, '');
+buildSizeSelect(document.getElementById('f_topSizeAlpha'), ALPHA_SIZES, '');
+buildMeasureGrid('bottomGrid', BOTTOM_FIELDS);
+
+/* ================= COUNTRY DIAL CODES ================= */
+const GULF_CODES = [
+  ['Bahrain','+973'],['Saudi Arabia','+966'],['United Arab Emirates','+971'],
+  ['Qatar','+974'],['Kuwait','+965'],['Oman','+968'],
+  ['India','+91'],['Pakistan','+92'],['Philippines','+63'],
+  ['Egypt','+20'],['Jordan','+962'],['Lebanon','+961'],
+  ['United Kingdom','+44'],['United States','+1']
+];
+const ALL_CODES = [
+  ['Afghanistan','+93'],['Albania','+355'],['Algeria','+213'],['Andorra','+376'],['Angola','+244'],
+  ['Argentina','+54'],['Armenia','+374'],['Australia','+61'],['Austria','+43'],['Azerbaijan','+994'],
+  ['Bahamas','+1'],['Bangladesh','+880'],['Barbados','+1'],['Belarus','+375'],['Belgium','+32'],
+  ['Belize','+501'],['Benin','+229'],['Bhutan','+975'],['Bolivia','+591'],['Bosnia and Herzegovina','+387'],
+  ['Botswana','+267'],['Brazil','+55'],['Brunei','+673'],['Bulgaria','+359'],['Burkina Faso','+226'],
+  ['Burundi','+257'],['Cambodia','+855'],['Cameroon','+237'],['Canada','+1'],['Cape Verde','+238'],
+  ['Central African Republic','+236'],['Chad','+235'],['Chile','+56'],['China','+86'],['Colombia','+57'],
+  ['Comoros','+269'],['Congo','+242'],['Costa Rica','+506'],["Cote d'Ivoire",'+225'],['Croatia','+385'],
+  ['Cuba','+53'],['Cyprus','+357'],['Czech Republic','+420'],['Denmark','+45'],['Djibouti','+253'],
+  ['Dominican Republic','+1'],['Ecuador','+593'],['Egypt','+20'],['El Salvador','+503'],
+  ['Equatorial Guinea','+240'],['Eritrea','+291'],['Estonia','+372'],['Eswatini','+268'],['Ethiopia','+251'],
+  ['Fiji','+679'],['Finland','+358'],['France','+33'],['Gabon','+241'],['Gambia','+220'],
+  ['Georgia','+995'],['Germany','+49'],['Ghana','+233'],['Greece','+30'],['Guatemala','+502'],
+  ['Guinea','+224'],['Guinea-Bissau','+245'],['Guyana','+592'],['Haiti','+509'],['Honduras','+504'],
+  ['Hong Kong','+852'],['Hungary','+36'],['Iceland','+354'],['India','+91'],['Indonesia','+62'],
+  ['Iran','+98'],['Iraq','+964'],['Ireland','+353'],['Israel','+972'],['Italy','+39'],
+  ['Jamaica','+1'],['Japan','+81'],['Jordan','+962'],['Kazakhstan','+7'],['Kenya','+254'],
+  ['Kiribati','+686'],['Kosovo','+383'],['Kuwait','+965'],['Kyrgyzstan','+996'],['Laos','+856'],
+  ['Latvia','+371'],['Lebanon','+961'],['Lesotho','+266'],['Liberia','+231'],['Libya','+218'],
+  ['Liechtenstein','+423'],['Lithuania','+370'],['Luxembourg','+352'],['Macau','+853'],
+  ['Madagascar','+261'],['Malawi','+265'],['Malaysia','+60'],['Maldives','+960'],['Mali','+223'],
+  ['Malta','+356'],['Mauritania','+222'],['Mauritius','+230'],['Mexico','+52'],['Moldova','+373'],
+  ['Monaco','+377'],['Mongolia','+976'],['Montenegro','+382'],['Morocco','+212'],['Mozambique','+258'],
+  ['Myanmar','+95'],['Namibia','+264'],['Nepal','+977'],['Netherlands','+31'],['New Zealand','+64'],
+  ['Nicaragua','+505'],['Niger','+227'],['Nigeria','+234'],['North Korea','+850'],
+  ['North Macedonia','+389'],['Norway','+47'],['Oman','+968'],['Pakistan','+92'],['Palau','+680'],
+  ['Palestine','+970'],['Panama','+507'],['Papua New Guinea','+675'],['Paraguay','+595'],['Peru','+51'],
+  ['Philippines','+63'],['Poland','+48'],['Portugal','+351'],['Qatar','+974'],['Romania','+40'],
+  ['Russia','+7'],['Rwanda','+250'],['Samoa','+685'],['San Marino','+378'],['Saudi Arabia','+966'],
+  ['Senegal','+221'],['Serbia','+381'],['Seychelles','+248'],['Sierra Leone','+232'],['Singapore','+65'],
+  ['Slovakia','+421'],['Slovenia','+386'],['Solomon Islands','+677'],['Somalia','+252'],
+  ['South Africa','+27'],['South Korea','+82'],['South Sudan','+211'],['Spain','+34'],['Sri Lanka','+94'],
+  ['Sudan','+249'],['Suriname','+597'],['Sweden','+46'],['Switzerland','+41'],['Syria','+963'],
+  ['Taiwan','+886'],['Tajikistan','+992'],['Tanzania','+255'],['Thailand','+66'],['Timor-Leste','+670'],
+  ['Togo','+228'],['Tonga','+676'],['Trinidad and Tobago','+1'],['Tunisia','+216'],['Turkey','+90'],
+  ['Turkmenistan','+993'],['Tuvalu','+688'],['Uganda','+256'],['Ukraine','+380'],
+  ['United Arab Emirates','+971'],['United Kingdom','+44'],['United States','+1'],['Uruguay','+598'],
+  ['Uzbekistan','+998'],['Vanuatu','+678'],['Vatican City','+379'],['Venezuela','+58'],['Vietnam','+84'],
+  ['Yemen','+967'],['Zambia','+260'],['Zimbabwe','+263']
+];
+function buildCodeOptions(select, defaultDial){
+  let html = '<optgroup label="Common">';
+  GULF_CODES.forEach(([n,d])=> html += `<option value="${d}">${d} ${n}</option>`);
+  html += '</optgroup><optgroup label="All countries">';
+  ALL_CODES.forEach(([n,d])=> html += `<option value="${d}">${d} ${n}</option>`);
+  html += '</optgroup>';
+  select.innerHTML = html;
+  select.value = defaultDial;
+}
+buildCodeOptions(document.getElementById('f_phoneCode'), '+973');
+buildCodeOptions(document.getElementById('f_whatsappCode'), '+973');
+
+/* ================= CUSTOMER DATA ================= */
+let customers = [];
+let activeId = null;
+let currentInterestedItems = []; // working copy of interested items for the record in the form
+let currentTags = [];
+const AVAILABLE_TAGS = ['VIP', 'Frequent', 'New'];
+
+function renderTagsBar(){
+  const bar = document.getElementById('tagsBar');
+  const editable = canEdit(currentEditableRecord());
+  bar.innerHTML = AVAILABLE_TAGS.map(t=>`
+    <span class="tag-chip ${currentTags.includes(t)?'on':''} ${editable?'':'readonly'}" data-tag="${t}">${t}</span>
+  `).join('');
+  bar.querySelectorAll('.tag-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      if(!canEdit(currentEditableRecord())) return;
+      const t = chip.dataset.tag;
+      if(currentTags.includes(t)) currentTags = currentTags.filter(x=>x!==t);
+      else currentTags.push(t);
+      renderTagsBar();
+    });
+  });
+}
+
+function genItemId(){
+  return 'II' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+
+function currentEditableRecord(){
+  return activeId ? customers.find(c=>c.id===activeId) : null;
+}
+
+function renderInterestedItems(){
+  const list = document.getElementById('itemsList');
+  const editable = canEdit(currentEditableRecord());
+  document.getElementById('addItemBtn').style.display = editable ? 'inline-block' : 'none';
+
+  if(currentInterestedItems.length === 0){
+    list.innerHTML = '<div class="items-empty">No interested items yet.</div>';
+    return;
+  }
+
+  const todayStr = toLocalDateStr(new Date());
+  list.innerHTML = currentInterestedItems.map((it, idx) => {
+    const meta = it.staffName
+      ? `Added by ${it.staffName}${it.createdAt ? ' · ' + new Date(it.createdAt).toLocaleDateString() : ''}`
+      : 'New item';
+    const overdue = it.followUpDate && it.followUpDate < todayStr && it.status !== 'sold' && it.status !== 'lost';
+    return `
+      <div class="item-block">
+        <div class="item-main">
+          <input type="text" data-item-field="barcode" data-item-idx="${idx}" value="${(it.barcode||'').replace(/"/g,'&quot;')}" placeholder="Scan or type barcode" ${editable?'':'disabled'}>
+          <input type="number" step="0.001" min="0" data-item-field="price" data-item-idx="${idx}" value="${it.price!=null && it.price!=='' ? it.price : ''}" placeholder="0.000" ${editable?'':'disabled'}>
+          ${editable ? `<button class="btn-text danger" type="button" data-item-remove="${idx}">Remove</button>` : ''}
+        </div>
+        <div class="item-sub">
+          <div class="sub-field">
+            <label>Follow-up date</label>
+            <input type="date" data-item-field="followUpDate" data-item-idx="${idx}" value="${it.followUpDate||''}" ${editable?'':'disabled'} style="${overdue?'border-color:var(--danger);color:var(--danger);':''}">
+          </div>
+          <div class="sub-field">
+            <label>Status</label>
+            <select data-item-field="status" data-item-idx="${idx}" ${editable?'':'disabled'}>
+              <option value="open" ${(!it.status || it.status==='open')?'selected':''}>Open</option>
+              <option value="sold" ${it.status==='sold'?'selected':''}>Sold</option>
+              <option value="lost" ${it.status==='lost'?'selected':''}>Not interested</option>
+            </select>
+          </div>
+          <div class="items-cell-meta" style="align-self:center;">${meta}${overdue ? ' · <span style="color:var(--danger);font-weight:700;">Follow-up overdue</span>' : ''}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  list.querySelectorAll('[data-item-field]').forEach(input=>{
+    input.addEventListener(input.tagName==='SELECT' ? 'change' : 'input', function(){
+      const idx = parseInt(this.dataset.itemIdx, 10);
+      const field = this.dataset.itemField;
+      const prevStatus = currentInterestedItems[idx].status;
+      currentInterestedItems[idx][field] = this.value;
+      if(field === 'status' && this.value !== prevStatus && (this.value==='sold' || this.value==='lost')){
+        currentInterestedItems[idx].statusAt = new Date().toISOString();
+      }
+      if(field === 'followUpDate' || field === 'status') renderInterestedItems();
+    });
+  });
+  list.querySelectorAll('[data-item-remove]').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      const idx = parseInt(this.dataset.itemRemove, 10);
+      currentInterestedItems.splice(idx, 1);
+      renderInterestedItems();
+    });
+  });
+}
+
+document.getElementById('addItemBtn').addEventListener('click', ()=>{
+  currentInterestedItems.push({ id:null, barcode:'', price:'', staffId:null, staffName:null, createdAt:null, updatedAt:null, followUpDate:'', status:'open', statusAt:null });
+  renderInterestedItems();
+});
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function nextId(){
+  let max = 0;
+  customers.forEach(c=>{
+    const m = /^BOSS-(\d+)$/.exec(c.id||'');
+    if(m) max = Math.max(max, parseInt(m[1],10));
+  });
+  return 'BOSS-' + String(max+1).padStart(4,'0');
+}
+
+async function loadCustomers(){
+  try{
+    const result = await storage.get('customers');
+    customers = result && result.value ? JSON.parse(result.value) : [];
+  }catch(e){
+    customers = [];
+  }
+  await loadStaffAccounts();
+  populateLoginDropdown();
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('mainLayout').style.display = 'grid';
+  document.getElementById('configBanner').classList.toggle('show', !FIREBASE_CONFIGURED);
+}
+
+async function persist(){
+  try{
+    const result = await storage.set('customers', JSON.stringify(customers));
+    if(!result){ showToast('Could not save — storage error.'); return false; }
+    return true;
+  }catch(e){
+    showToast('Could not save — storage error.');
+    return false;
+  }
+}
+
+function canEdit(c){
+  if(!currentUser) return false;
+  // Any signed-in staff member can edit any client record — information belongs to the
+  // whole team, not just whoever created it. Deleting a record remains master-only (see deleteBtn logic).
+  return true;
+}
+
+function applyFormPermissions(record){
+  const editable = canEdit(record);
+  const ids = ['f_id','f_name','f_lastname','f_phone','f_phoneCode','f_whatsapp','f_whatsappCode',
+    'f_email','f_nationality','f_birthday','f_suitSizeIT','f_trouserSizeIT','f_trouserSizeUS','f_trouserSizeAlpha','f_topSizeAlpha','f_alteration','f_preference'];
+  ids.forEach(id=> document.getElementById(id).disabled = !editable);
+  UPPER_FIELDS.concat(BOTTOM_FIELDS).forEach(([k])=> document.getElementById('m_'+k).disabled = !editable);
+  document.getElementById('saveBtn').style.display = editable ? 'inline' : 'none';
+  document.getElementById('clearBtn').style.display = editable ? 'inline' : 'none';
+  document.getElementById('deleteBtn').style.display = (editable && record && currentUser.role==='master') ? 'inline' : 'none';
+
+  const banner = document.getElementById('viewBanner');
+  if(record && record.createdById !== currentUser.id){
+    banner.textContent = `Originally added by ${record.createdByName || 'another team member'}. You can still update this record — changes are shared across the team.`;
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
+}
+
+/* ---- Master sidebar list ---- */
+function renderList(){
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const listEl = document.getElementById('clientList');
+  const filtered = customers.filter(c=>{
+    if(!q) return true;
+    const hay = [c.id,c.name,c.lastName,c.phone,c.whatsapp,(c.tags||[]).join(' ')].join(' ').toLowerCase();
+    return hay.includes(q);
+  }).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+
+  document.getElementById('countPill').textContent =
+    customers.length + (customers.length===1 ? ' client on file' : ' clients on file');
+
+  if(filtered.length===0){
+    listEl.innerHTML = '<div class="empty-note">No clients yet. Add your first record.</div>';
+    return;
+  }
+  listEl.innerHTML = filtered.map(c=>`
+    <div class="client-row ${c.id===activeId?'active':''}" data-id="${c.id}">
+      <span class="cname">${(c.name||'')+' '+(c.lastName||'')}${(c.tags||[]).map(t=>`<span class="list-tag" data-tag="${t}">${t}</span>`).join('')}</span>
+      <span class="cmeta">${c.id} · ${c.whatsapp||'—'}</span>
+    </div>
+  `).join('');
+  listEl.querySelectorAll('.client-row').forEach(row=>{
+    row.addEventListener('click', ()=> loadIntoForm(row.dataset.id));
+  });
+}
+
+/* ---- Staff search-first lookup ---- */
+document.getElementById('lookupBtn').addEventListener('click', runLookup);
+document.getElementById('lookupInput').addEventListener('keydown', e=>{ if(e.key==='Enter') runLookup(); });
+
+function runLookup(){
+  const q = document.getElementById('lookupInput').value.trim().toLowerCase();
+  const resultEl = document.getElementById('lookupResult');
+  if(!q){ return; }
+  const match = customers.find(c =>
+    (c.id||'').toLowerCase() === q ||
+    (c.whatsapp||'').toLowerCase().replace(/\s+/g,'') === q.replace(/\s+/g,'') ||
+    (c.whatsappNumber||'').toLowerCase() === q
+  );
+  resultEl.style.display = 'block';
+  if(match){
+    resultEl.className = 'lookup-result found';
+    resultEl.textContent = `Found: ${match.name} ${match.lastName||''} (${match.id}) — record opened below.`;
+    document.getElementById('mainPanel').style.display = 'block';
+    loadIntoForm(match.id);
+  } else {
+    resultEl.className = 'lookup-result notfound';
+    resultEl.innerHTML = `No existing record for "${document.getElementById('lookupInput').value.trim()}". `;
+    const btn = document.createElement('button');
+    btn.className = 'btn-text';
+    btn.textContent = 'Create new client with this info →';
+    btn.onclick = ()=> startNewFromLookup(document.getElementById('lookupInput').value.trim());
+    resultEl.appendChild(btn);
+  }
+}
+
+function startNewFromLookup(value){
+  document.getElementById('mainPanel').style.display = 'block';
+  resetForm();
+  // guess whether it looks like a customer ID or a WhatsApp number
+  if(/^\d[\d\s+]*$/.test(value)){
+    document.getElementById('f_whatsapp').value = value.replace(/^\+?\d{1,4}\s*/, '');
+  } else if(value){
+    document.getElementById('f_id').value = value;
+  }
+}
+
+/* ---- Form state ---- */
+function resetForm(){
+  activeId = null;
+  document.getElementById('f_id').value = nextId();
+  document.getElementById('f_name').value = '';
+  document.getElementById('f_lastname').value = '';
+  document.getElementById('f_phone').value = '';
+  document.getElementById('f_phoneCode').value = '+973';
+  document.getElementById('f_whatsapp').value = '';
+  document.getElementById('f_whatsappCode').value = '+973';
+  document.getElementById('f_email').value = '';
+  document.getElementById('f_nationality').value = '';
+  document.getElementById('f_birthday').value = '';
+  document.getElementById('f_suitSizeIT').value = '';
+  document.getElementById('f_trouserSizeIT').value = '';
+  document.getElementById('f_trouserSizeUS').value = '';
+  document.getElementById('f_trouserSizeAlpha').value = '';
+  document.getElementById('f_topSizeAlpha').value = '';
+  document.getElementById('f_alteration').value = '';
+  document.getElementById('f_preference').value = '';
+  document.getElementById('measurementsWrap').style.display = 'none';
+  document.getElementById('toggleSym').textContent = '+';
+  document.getElementById('toggleMeasurementsBtn').lastChild.textContent = ' Add Tailoring Measurements & Alteration Notes';
+  UPPER_FIELDS.forEach(([k])=> document.getElementById('m_'+k).value = '');
+  BOTTOM_FIELDS.forEach(([k])=> document.getElementById('m_'+k).value = '');
+  document.getElementById('f_name').classList.remove('err');
+  document.getElementById('f_whatsapp').classList.remove('err');
+  document.getElementById('reqError').classList.remove('show');
+  document.getElementById('statusTag').textContent = 'New record';
+  currentInterestedItems = [];
+  currentTags = [];
+  renderInterestedItems();
+  renderTagsBar();
+  applyFormPermissions(null);
+  if(document.getElementById('masterSidebar').style.display !== 'none') renderList();
+}
+
+function loadIntoForm(id){
+  const c = customers.find(x=>x.id===id);
+  if(!c) return;
+  activeId = c.id;
+  document.getElementById('f_id').value = c.id;
+  document.getElementById('f_name').value = c.name||'';
+  document.getElementById('f_lastname').value = c.lastName||'';
+  document.getElementById('f_phoneCode').value = c.phoneCode || '+973';
+  document.getElementById('f_phone').value = c.phoneNumber||'';
+  document.getElementById('f_whatsappCode').value = c.whatsappCode || '+973';
+  document.getElementById('f_whatsapp').value = c.whatsappNumber||'';
+  document.getElementById('f_email').value = c.email||'';
+  document.getElementById('f_nationality').value = c.nationality||'';
+  document.getElementById('f_birthday').value = c.birthday||'';
+  document.getElementById('f_suitSizeIT').value = c.suitSizeIT||'';
+  document.getElementById('f_trouserSizeIT').value = c.trouserSizeIT||'';
+  document.getElementById('f_trouserSizeUS').value = c.trouserSizeUS||'';
+  document.getElementById('f_trouserSizeAlpha').value = c.trouserSizeAlpha||'';
+  document.getElementById('f_topSizeAlpha').value = c.topSizeAlpha||'';
+  document.getElementById('f_alteration').value = c.alterationNote||'';
+  document.getElementById('f_preference').value = c.preference||'';
+  const hasMeasurements = (c.measurements && Object.values(c.measurements).some(v=>v!=null && v!=='')) || (c.alterationNote && c.alterationNote.trim()) || c.suitSizeIT || c.trouserSizeIT || c.trouserSizeUS || c.trouserSizeAlpha || c.topSizeAlpha;
+  document.getElementById('measurementsWrap').style.display = hasMeasurements ? 'block' : 'none';
+  document.getElementById('toggleSym').textContent = hasMeasurements ? '−' : '+';
+  document.getElementById('toggleMeasurementsBtn').lastChild.textContent = hasMeasurements
+    ? ' Hide Tailoring Measurements & Alteration Notes'
+    : ' Add Tailoring Measurements & Alteration Notes';
+  UPPER_FIELDS.forEach(([k])=> document.getElementById('m_'+k).value = (c.measurements&&c.measurements[k]!=null)?c.measurements[k]:'');
+  BOTTOM_FIELDS.forEach(([k])=> document.getElementById('m_'+k).value = (c.measurements&&c.measurements[k]!=null)?c.measurements[k]:'');
+  document.getElementById('f_name').classList.remove('err');
+  document.getElementById('f_whatsapp').classList.remove('err');
+  document.getElementById('reqError').classList.remove('show');
+  document.getElementById('statusTag').textContent = `Editing ${c.id} · added by ${c.createdByName||'—'}`;
+  currentInterestedItems = (c.interestedItems || []).map(it => ({ ...it }));
+  currentTags = Array.isArray(c.tags) ? [...c.tags] : [];
+  renderInterestedItems();
+  renderTagsBar();
+  applyFormPermissions(c);
+  if(document.getElementById('masterSidebar').style.display !== 'none') renderList();
+}
+
+async function saveClient(){
+  const existingRecord = activeId ? customers.find(c=>c.id===activeId) : null;
+  if(!canEdit(existingRecord)){ showToast('You do not have permission to edit this record.'); return; }
+
+  const name = document.getElementById('f_name').value.trim();
+  const whatsapp = document.getElementById('f_whatsapp').value.trim();
+  const nameEl = document.getElementById('f_name');
+  const waEl = document.getElementById('f_whatsapp');
+  nameEl.classList.toggle('err', !name);
+  waEl.classList.toggle('err', !whatsapp);
+  document.getElementById('reqError').classList.toggle('show', !name || !whatsapp);
+  if(!name || !whatsapp) return;
+
+  let id = document.getElementById('f_id').value.trim() || nextId();
+  const measurements = {};
+  UPPER_FIELDS.concat(BOTTOM_FIELDS).forEach(([k])=>{
+    const v = document.getElementById('m_'+k).value;
+    measurements[k] = v==='' ? null : parseFloat(v);
+  });
+
+  const phoneCode = document.getElementById('f_phoneCode').value;
+  const phoneNumber = document.getElementById('f_phone').value.trim();
+  const whatsappCode = document.getElementById('f_whatsappCode').value;
+  const whatsappNumber = whatsapp;
+
+  const finalItems = [];
+  let skippedIncomplete = 0;
+  currentInterestedItems.forEach(it=>{
+    const barcode = (it.barcode || '').toString().trim();
+    const priceRaw = (it.price !== undefined && it.price !== null) ? it.price.toString().trim() : '';
+    if(!barcode && !priceRaw) return; // fully empty row, silently drop
+    if(!barcode || priceRaw === ''){ skippedIncomplete++; return; } // incomplete row, drop and warn
+    const price = parseFloat(priceRaw);
+    if(isNaN(price)){ skippedIncomplete++; return; }
+
+    if(it.id){
+      const prior = (existingRecord && existingRecord.interestedItems || []).find(x=>x.id===it.id);
+      const changed = !prior || prior.barcode !== barcode || Number(prior.price) !== price;
+      finalItems.push({
+        id: it.id,
+        barcode, price,
+        staffId: prior ? prior.staffId : currentUser.id,
+        staffName: prior ? prior.staffName : currentUser.name,
+        createdAt: prior ? prior.createdAt : new Date().toISOString(),
+        updatedAt: changed ? new Date().toISOString() : (prior ? prior.updatedAt : new Date().toISOString()),
+        followUpDate: it.followUpDate || '',
+        status: it.status || 'open',
+        statusAt: it.statusAt || (prior ? prior.statusAt : null) || null
+      });
+    } else {
+      const now = new Date().toISOString();
+      finalItems.push({
+        id: genItemId(),
+        barcode, price,
+        staffId: currentUser.id,
+        staffName: currentUser.name,
+        createdAt: now,
+        updatedAt: now,
+        followUpDate: it.followUpDate || '',
+        status: it.status || 'open',
+        statusAt: it.statusAt || null
+      });
+    }
+  });
+  if(skippedIncomplete > 0){
+    showToast(`${skippedIncomplete} interested item${skippedIncomplete===1?'':'s'} skipped — needs both barcode and price.`);
+  }
+
+  const record = {
+    id,
+    name,
+    lastName: document.getElementById('f_lastname').value.trim(),
+    phoneCode,
+    phoneNumber,
+    phone: phoneNumber ? (phoneCode + ' ' + phoneNumber) : '',
+    whatsappCode,
+    whatsappNumber,
+    whatsapp: whatsappCode + ' ' + whatsappNumber,
+    email: document.getElementById('f_email').value.trim(),
+    nationality: document.getElementById('f_nationality').value.trim(),
+    birthday: document.getElementById('f_birthday').value,
+    suitSizeIT: document.getElementById('f_suitSizeIT').value,
+    trouserSizeIT: document.getElementById('f_trouserSizeIT').value,
+    trouserSizeUS: document.getElementById('f_trouserSizeUS').value,
+    trouserSizeAlpha: document.getElementById('f_trouserSizeAlpha').value,
+    topSizeAlpha: document.getElementById('f_topSizeAlpha').value,
+    measurements,
+    alterationNote: document.getElementById('f_alteration').value.trim(),
+    preference: document.getElementById('f_preference').value.trim(),
+    interestedItems: finalItems,
+    tags: [...currentTags],
+    updatedAt: new Date().toISOString(),
+    createdById: existingRecord ? existingRecord.createdById : currentUser.id,
+    createdByName: existingRecord ? existingRecord.createdByName : currentUser.name
+  };
+
+  const existingIdx = customers.findIndex(c=>c.id===id);
+  if(activeId && activeId !== id){
+    const oldIdx = customers.findIndex(c=>c.id===activeId);
+    if(oldIdx>-1) customers.splice(oldIdx,1);
+  }
+  if(existingIdx>-1){
+    record.createdAt = customers[existingIdx].createdAt || record.updatedAt;
+    customers[existingIdx] = record;
+  } else {
+    record.createdAt = record.updatedAt;
+    customers.push(record);
+  }
+
+  const ok = await persist();
+  if(ok){
+    showToast('Client saved.');
+    loadIntoForm(id);
+    updateBirthdayBadge();
+    updateMyCustomersPill();
+    updateFollowupsPill();
+  }
+}
+
+async function deleteClient(){
+  if(!activeId || currentUser.role !== 'master') return;
+  if(!confirm('Delete this client record? This cannot be undone.')) return;
+  customers = customers.filter(c=>c.id!==activeId);
+  const ok = await persist();
+  if(ok){
+    showToast('Client deleted.');
+    resetForm();
+    updateBirthdayBadge();
+    updateMyCustomersPill();
+    updateFollowupsPill();
+  }
+}
+
+function exportExcel(){
+  if(currentUser.role !== 'master') return;
+  if(customers.length===0){ showToast('No clients to export yet.'); return; }
+  const rows = customers.map(c=>{
+    const m = c.measurements||{};
+    const row = {
+      'Customer ID': c.id,
+      'First Name': c.name,
+      'Last Name': c.lastName,
+      'Phone': c.phone,
+      'WhatsApp': c.whatsapp,
+      'Email': c.email,
+      'Nationality': c.nationality,
+      'Suit Size (IT)': c.suitSizeIT || '',
+      'Trouser Size (IT)': c.trouserSizeIT || '',
+      'Trouser Size (US)': c.trouserSizeUS || '',
+      'Trouser Size (Alphabet)': c.trouserSizeAlpha || '',
+      'Top Size (Alphabet)': c.topSizeAlpha || '',
+      'Birthday': c.birthday || '',
+      'Added By': c.createdByName || ''
+    };
+    UPPER_FIELDS.forEach(([k,label])=> row['Upper - '+label+' (in)'] = m[k] ?? '');
+    BOTTOM_FIELDS.forEach(([k,label])=> row['Bottom - '+label+' (in)'] = m[k] ?? '');
+    row['Alteration Note'] = c.alterationNote || '';
+    row['Customer Preference'] = c.preference || '';
+    row['Last Updated'] = c.updatedAt || '';
+    return row;
+  });
+
+  const staffRows = staffAccounts.map(a=>({
+    'Employee ID': a.id,
+    'Employee Name': a.name,
+    'Role': a.role,
+    'Email': a.email || '',
+    'Account Status': a.passwordHash ? 'Active' : 'Not activated',
+    'Clients Added': customers.filter(c=>c.createdById===a.id).length
+  }));
+
+  const itemRows = [];
+  customers.forEach(c=>{
+    (c.interestedItems || []).forEach(it=>{
+      const added = it.createdAt ? new Date(it.createdAt) : null;
+      itemRows.push({
+        'Customer ID': c.id,
+        'Customer Name': `${c.name||''} ${c.lastName||''}`.trim(),
+        'WhatsApp': c.whatsapp || '',
+        'Email': c.email || '',
+        'Barcode': it.barcode || '',
+        'Interested Price': it.price ?? '',
+        'Staff Employee ID': it.staffId || '',
+        'Staff Name': it.staffName || '',
+        'Date Interested': added ? added.toLocaleDateString() : '',
+        'Time Interested': added ? added.toLocaleTimeString() : ''
+      });
+    });
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Clients');
+  const staffWs = XLSX.utils.json_to_sheet(staffRows);
+  XLSX.utils.book_append_sheet(wb, staffWs, 'Staff Summary');
+  const itemsWs = XLSX.utils.json_to_sheet(itemRows.length ? itemRows : [{ 'Customer ID':'', 'Customer Name':'', 'WhatsApp':'', 'Email':'', 'Barcode':'', 'Interested Price':'', 'Staff Employee ID':'', 'Staff Name':'', 'Date Interested':'', 'Time Interested':'' }]);
+  XLSX.utils.book_append_sheet(wb, itemsWs, 'Interested Items');
+
+  const stamp = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `BOSS_Bahrain_Client_Book_${stamp}.xlsx`);
+  showToast('Excel file downloading…');
+}
+
+/* ---- Birthdays ---- */
+function todaysBirthdays(){
+  const today = new Date();
+  const mmdd = String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+  return customers.filter(c => c.birthday && c.birthday.length===10 && c.birthday.slice(5) === mmdd);
+}
+
+function updateBirthdayBadge(){
+  const badge = document.getElementById('birthdayBadge');
+  const list = todaysBirthdays();
+  if(list.length > 0){
+    badge.textContent = list.length;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderBirthdayModal(){
+  const list = todaysBirthdays();
+  const listEl = document.getElementById('birthdayList');
+  const today = new Date();
+  document.getElementById('birthdaySubtitle').textContent =
+    `${list.length} client${list.length===1?'':'s'} celebrating today, ${today.toLocaleDateString('en-GB',{day:'numeric',month:'long'})}.`;
+
+  if(list.length===0){
+    listEl.innerHTML = '<div class="birthday-empty">No client birthdays today.</div>';
+  } else {
+    listEl.innerHTML = list.map(c=>{
+      const hasWa = !!(c.whatsappCode && c.whatsappNumber);
+      return `
+      <div class="birthday-row">
+        <div data-cardid="${c.id}" style="cursor:pointer;flex:1;">
+          <div class="bname">${c.name||''} ${c.lastName||''}</div>
+          <div class="bmeta">${c.id} · ${c.phone||'—'} · ${c.whatsapp||'—'}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+          ${hasWa ? `<button class="btn-text" data-quicksend="${c.id}" style="text-transform:none;color:#25D366;font-weight:700;">Quick Send →</button>` : ''}
+          <div class="bgo" data-cardid="${c.id}" style="cursor:pointer;">Send card →</div>
+        </div>
+      </div>
+    `;
+    }).join('');
+    listEl.querySelectorAll('[data-cardid]').forEach(row=>{
+      row.addEventListener('click', ()=>{
+        const c = customers.find(x=>x.id===row.dataset.cardid);
+        openGreetingCard(c);
+      });
+    });
+    listEl.querySelectorAll('[data-quicksend]').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const c = customers.find(x=>x.id===btn.dataset.quicksend);
+        const url = buildWhatsappUrl(c);
+        if(url) window.open(url, '_blank');
+      });
+    });
+  }
+  document.getElementById('birthdayModal').classList.add('show');
+}
+
+let autoBirthdayShownThisSession = false;
+function maybeAutoShowBirthdays(){
+  if(autoBirthdayShownThisSession) return;
+  const list = todaysBirthdays();
+  if(list.length > 0){
+    autoBirthdayShownThisSession = true;
+    renderBirthdayModal();
+  }
+}
+
+function toLocalDateStr(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function renderActivityModal(){
+  const dateInput = document.getElementById('activityDateInput');
+  if(!dateInput.value){
+    dateInput.value = toLocalDateStr(new Date());
+  }
+  document.getElementById('activityModal').classList.add('show');
+  renderActivityForDate(dateInput.value);
+}
+
+function renderActivityForDate(dateStr){
+  if(!dateStr) return;
+  const isMaster = currentUser.role === 'master';
+  const pool = isMaster ? customers : customers.filter(c=>c.createdById===currentUser.id);
+  const matches = pool.filter(c=> c.createdAt && toLocalDateStr(new Date(c.createdAt)) === dateStr);
+
+  const prettyDate = new Date(dateStr+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('activitySubtitle').textContent = isMaster
+    ? `All staff activity for ${prettyDate}.`
+    : `Your activity for ${prettyDate}.`;
+  document.getElementById('activitySummary').textContent = `Customers Added: ${matches.length}`;
+
+  const listEl = document.getElementById('activityList');
+  if(matches.length === 0){
+    listEl.innerHTML = '<div class="items-empty">No customers added on this date.</div>';
+    return;
+  }
+  listEl.innerHTML = matches.map(c=>{
+    const t = new Date(c.createdAt);
+    return `
+      <div class="staff-row" data-actid="${c.id}" style="cursor:pointer;">
+        <div class="info">
+          <div class="n">${c.name||''} ${c.lastName||''}</div>
+          <div class="i">${c.id}${isMaster ? ' · added by ' + (c.createdByName||'—') : ''} · ${t.toLocaleTimeString()}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  listEl.querySelectorAll('[data-actid]').forEach(row=>{
+    row.addEventListener('click', ()=>{
+      document.getElementById('activityModal').classList.remove('show');
+      document.getElementById('mainPanel').style.display = 'block';
+      loadIntoForm(row.dataset.actid);
+    });
+  });
+}
+
+/* ================= FOLLOW-UPS ================= */
+function dueFollowups(){
+  if(!currentUser) return [];
+  const isMaster = currentUser.role === 'master';
+  const todayStr = toLocalDateStr(new Date());
+  const out = [];
+  customers.forEach(c=>{
+    (c.interestedItems || []).forEach(it=>{
+      if(!it.followUpDate) return;
+      if(it.status === 'sold' || it.status === 'lost') return;
+      if(it.followUpDate > todayStr) return; // in the future — not due yet
+      if(!isMaster && it.staffId !== currentUser.id) return;
+      out.push({ customer: c, item: it });
+    });
+  });
+  out.sort((a,b)=> a.item.followUpDate.localeCompare(b.item.followUpDate));
+  return out;
+}
+
+function updateFollowupsPill(){
+  const btn = document.getElementById('followupsBtn');
+  if(!currentUser){ btn.style.display = 'none'; return; }
+  const due = dueFollowups();
+  btn.textContent = 'Follow-ups: ' + due.length;
+  btn.style.display = 'inline';
+}
+
+function renderFollowupsModal(){
+  const due = dueFollowups();
+  const todayStr = toLocalDateStr(new Date());
+  document.getElementById('followupsSubtitle').textContent =
+    (currentUser.role==='master' ? 'All staff — ' : 'Your items — ') +
+    `${due.length} interested item${due.length===1?'':'s'} due or overdue for follow-up.`;
+
+  const listEl = document.getElementById('followupsList');
+  if(due.length === 0){
+    listEl.innerHTML = '<div class="items-empty">Nothing due right now — you\'re all caught up.</div>';
+    return;
+  }
+  listEl.innerHTML = due.map(({customer:c, item:it})=>{
+    const overdue = it.followUpDate < todayStr;
+    return `
+      <div class="staff-row">
+        <div class="info" style="cursor:pointer;" data-fu-open="${c.id}">
+          <div class="n">${c.name||''} ${c.lastName||''} <span style="font-weight:400;color:var(--grey);">— ${it.barcode||'no barcode'}</span></div>
+          <div class="i">${it.followUpDate}${overdue ? ' · <span style="color:var(--danger);font-weight:700;">Overdue</span>' : ' · Due today'} · quoted by ${it.staffName||'—'}</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-text" data-fu-done="${c.id}" data-fu-item="${it.id}">Clear</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  listEl.querySelectorAll('[data-fu-open]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      document.getElementById('followupsModal').classList.remove('show');
+      document.getElementById('mainPanel').style.display = 'block';
+      loadIntoForm(el.dataset.fuOpen);
+    });
+  });
+  listEl.querySelectorAll('[data-fu-done]').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      const c = customers.find(x=>x.id===btn.dataset.fuDone);
+      const item = c && (c.interestedItems||[]).find(i=>i.id===btn.dataset.fuItem);
+      if(!item) return;
+      item.followUpDate = '';
+      const ok = await persist();
+      if(ok){
+        showToast('Follow-up cleared.');
+        updateFollowupsPill();
+        renderFollowupsModal();
+        if(activeId === c.id){ currentInterestedItems = (c.interestedItems||[]).map(x=>({...x})); renderInterestedItems(); }
+      }
+    });
+  });
+
+  document.getElementById('followupsModal').classList.add('show');
+}
+
+document.getElementById('followupsBtn').addEventListener('click', renderFollowupsModal);
+document.getElementById('closeFollowupsModal').addEventListener('click', ()=>{
+  document.getElementById('followupsModal').classList.remove('show');
+});
+
+/* ================= LEADERBOARD (master only) ================= */
+function renderLeaderboard(){
+  const fromStr = document.getElementById('leaderboardFrom').value;
+  const toStr = document.getElementById('leaderboardTo').value;
+
+  const perStaff = {};
+  staffAccounts.forEach(a=>{ perStaff[a.id] = { name:a.name, added:0, sold:0, lost:0 }; });
+
+  customers.forEach(c=>{
+    (c.interestedItems||[]).forEach(it=>{
+      const addedDate = it.createdAt ? toLocalDateStr(new Date(it.createdAt)) : null;
+      const inAddedRange = addedDate && (!fromStr || addedDate >= fromStr) && (!toStr || addedDate <= toStr);
+      if(inAddedRange){
+        if(!perStaff[it.staffId]) perStaff[it.staffId] = { name: it.staffName || it.staffId, added:0, sold:0, lost:0 };
+        perStaff[it.staffId].added++;
+      }
+      if(it.status === 'sold' && it.statusAt){
+        const soldDate = toLocalDateStr(new Date(it.statusAt));
+        const inSoldRange = (!fromStr || soldDate >= fromStr) && (!toStr || soldDate <= toStr);
+        if(inSoldRange){
+          if(!perStaff[it.staffId]) perStaff[it.staffId] = { name: it.staffName || it.staffId, added:0, sold:0, lost:0 };
+          perStaff[it.staffId].sold++;
+        }
+      }
+    });
+  });
+
+  const rows = Object.values(perStaff)
+    .filter(s => s.added > 0 || s.sold > 0)
+    .sort((a,b)=> b.sold - a.sold || b.added - a.added);
+
+  const table = document.getElementById('leaderboardTable');
+  if(rows.length === 0){
+    table.innerHTML = '<tbody><tr><td style="text-align:center;color:var(--grey);padding:20px;">No interested items in this period.</td></tr></tbody>';
+    return;
+  }
+  const bodyHtml = rows.map(s=>{
+    const conv = s.added > 0 ? Math.round((s.sold / s.added) * 100) : 0;
+    return `<tr><td>${s.name}</td><td>${s.added}</td><td>${s.sold}</td><td>${conv}%</td></tr>`;
+  }).join('');
+  table.innerHTML = `<thead><tr><th>Staff</th><th>Items Added</th><th>Items Sold</th><th>Conversion</th></tr></thead><tbody>${bodyHtml}</tbody>`;
+}
+
+document.getElementById('leaderboardBtn').addEventListener('click', ()=>{
+  if(!document.getElementById('leaderboardFrom').value){
+    const d = new Date(); d.setDate(d.getDate()-30);
+    document.getElementById('leaderboardFrom').value = toLocalDateStr(d);
+    document.getElementById('leaderboardTo').value = toLocalDateStr(new Date());
+  }
+  renderLeaderboard();
+  document.getElementById('leaderboardModal').classList.add('show');
+});
+document.getElementById('closeLeaderboardModal').addEventListener('click', ()=>{
+  document.getElementById('leaderboardModal').classList.remove('show');
+});
+document.getElementById('leaderboardFrom').addEventListener('change', renderLeaderboard);
+document.getElementById('leaderboardTo').addEventListener('change', renderLeaderboard);
+document.querySelectorAll('[data-lb-preset]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const preset = btn.dataset.lbPreset;
+    if(preset === 'all'){
+      document.getElementById('leaderboardFrom').value = '';
+      document.getElementById('leaderboardTo').value = '';
+    } else {
+      const days = parseInt(preset, 10);
+      const d = new Date(); d.setDate(d.getDate()-days);
+      document.getElementById('leaderboardFrom').value = toLocalDateStr(d);
+      document.getElementById('leaderboardTo').value = toLocalDateStr(new Date());
+    }
+    renderLeaderboard();
+  });
+});
+
+function drawSpacedText(ctx, text, cx, y, spacing){
+  const widths = [...text].map(ch => ctx.measureText(ch).width);
+  const totalWidth = widths.reduce((a,b)=>a+b,0) + spacing*(text.length-1);
+  let x = cx - totalWidth/2;
+  for(let i=0;i<text.length;i++){
+    ctx.fillText(text[i], x + widths[i]/2, y);
+    x += widths[i] + spacing;
+  }
+}
+
+function wrapText(ctx, text, maxWidth){
+  const words = text.split(' ');
+  const lines = [];
+  let line = '';
+  words.forEach(w=>{
+    const test = line ? line + ' ' + w : w;
+    if(ctx.measureText(test).width > maxWidth && line){
+      lines.push(line);
+      line = w;
+    } else {
+      line = test;
+    }
+  });
+  if(line) lines.push(line);
+  return lines;
+}
+
+function renderCardCanvas(c){
+  const canvas = document.createElement('canvas');
+  const W = 1000, H = 1300;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const GOLD = '#AD8A54';
+  const INK = '#0A0A0A';
+  const LIGHT = '#EDEBE7';
+
+  ctx.fillStyle = INK;
+  ctx.fillRect(0,0,W,H);
+
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(56,56,W-112,H-112);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+
+  ctx.fillStyle = GOLD;
+  ctx.font = '300 46px Arial, sans-serif';
+  drawSpacedText(ctx, 'HAPPY', W/2, 190, 16);
+  drawSpacedText(ctx, 'BIRTHDAY', W/2, 250, 16);
+
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(W/2-65, 300); ctx.lineTo(W/2+65, 300);
+  ctx.stroke();
+
+  ctx.font = '800 66px Arial, sans-serif';
+  drawSpacedText(ctx, 'BOSS', W/2, 400, 18);
+
+  // Message body
+  ctx.fillStyle = LIGHT;
+  ctx.font = '400 28px Arial, sans-serif';
+  let y = 500;
+  const lineHeight = 42;
+  const maxWidth = W - 220;
+
+  const paragraphs = [
+    `Dear Mr. ${(c.name||'').trim()} ${(c.lastName||'').trim()},`,
+    'On behalf of the BOSS Team, we would like to wish you a very Happy Birthday.',
+    'May your special day be filled with joy, success, and memorable moments.',
+    'We are delighted to celebrate this special occasion with you.'
+  ];
+  paragraphs.forEach(p=>{
+    const lines = wrapText(ctx, p, maxWidth);
+    lines.forEach(l=>{ ctx.fillText(l, W/2, y); y += lineHeight; });
+    y += 14;
+  });
+
+  y += 20;
+  ctx.strokeStyle = GOLD;
+  ctx.beginPath();
+  ctx.moveTo(W/2-65, y); ctx.lineTo(W/2+65, y);
+  ctx.stroke();
+  y += 60;
+
+  ctx.fillStyle = GOLD;
+  ctx.font = '400 22px Arial, sans-serif';
+  drawSpacedText(ctx, 'HAPPY BIRTHDAY', W/2, y, 5);
+  y += 60;
+  ctx.font = '800 40px Arial, sans-serif';
+  drawSpacedText(ctx, 'BOSS', W/2, y, 12);
+
+  return canvas;
+}
+
+function buildGreetingMessage(c){
+  return `Dear Mr. ${c.name||''} ${c.lastName||''},
+
+On behalf of the BOSS Team, we would like to wish you a very Happy Birthday.
+
+May your special day be filled with joy, success, and memorable moments.
+
+We are delighted to celebrate this special occasion with you.
+
+Happy Birthday — BOSS`;
+}
+
+function buildWhatsappUrl(c){
+  if(!c.whatsappCode || !c.whatsappNumber) return null;
+  const digits = (c.whatsappCode + c.whatsappNumber).replace(/[^\d]/g,'');
+  return `https://wa.me/${digits}?text=${encodeURIComponent(buildGreetingMessage(c))}`;
+}
+
+let currentCardCustomer = null;
+
+function openGreetingCard(c){
+  currentCardCustomer = c;
+  document.getElementById('cardName').textContent = `${c.name||''} ${c.lastName||''}`.trim();
+  const waBtn = document.getElementById('sendWhatsappBtn');
+  const hasWhatsapp = !!(c.whatsappCode && c.whatsappNumber);
+  waBtn.disabled = !hasWhatsapp;
+  waBtn.textContent = hasWhatsapp ? 'Send via WhatsApp' : 'No WhatsApp number on file';
+  document.getElementById('birthdayModal').classList.remove('show');
+  document.getElementById('cardModal').classList.add('show');
+}
+
+document.getElementById('birthdayBtn').addEventListener('click', renderBirthdayModal);
+document.getElementById('closeBirthdayModal').addEventListener('click', ()=>{
+  document.getElementById('birthdayModal').classList.remove('show');
+});
+document.getElementById('myCustomersBtn').addEventListener('click', renderActivityModal);
+document.getElementById('closeActivityModal').addEventListener('click', ()=>{
+  document.getElementById('activityModal').classList.remove('show');
+});
+document.getElementById('activityDateInput').addEventListener('change', function(){
+  renderActivityForDate(this.value);
+});
+document.getElementById('closeCardModal').addEventListener('click', ()=>{
+  document.getElementById('cardModal').classList.remove('show');
+});
+
+document.getElementById('downloadCardBtn').addEventListener('click', ()=>{
+  if(!currentCardCustomer){ showToast('Open a client card first.'); return; }
+  const btn = document.getElementById('downloadCardBtn');
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Preparing…';
+  try{
+    const canvas = renderCardCanvas(currentCardCustomer);
+    canvas.toBlob((blob)=>{
+      btn.disabled = false; btn.textContent = original;
+      if(!blob){ showToast('Could not generate the card image.'); return; }
+      const safeName = (currentCardCustomer.name+'_'+(currentCardCustomer.lastName||'')).trim().replace(/\s+/g,'_') || 'card';
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `BOSS_Birthday_${safeName}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    }, 'image/png');
+  }catch(e){
+    btn.disabled = false; btn.textContent = original;
+    showToast('Could not generate the card image: ' + (e && e.message ? e.message : 'unknown error'));
+  }
+});
+
+document.getElementById('sendWhatsappBtn').addEventListener('click', ()=>{
+  if(!currentCardCustomer) return;
+  const c = currentCardCustomer;
+  const btn = document.getElementById('sendWhatsappBtn');
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Preparing…';
+
+  const canvas = renderCardCanvas(c);
+  const filename = `BOSS_Birthday_${(c.name+'_'+(c.lastName||'')).trim().replace(/\s+/g,'_') || 'card'}.png`;
+  const message = buildGreetingMessage(c);
+
+  canvas.toBlob(async (blob)=>{
+    btn.disabled = false; btn.textContent = original;
+    if(!blob){ showToast('Could not generate the card image.'); return; }
+    const file = new File([blob], filename, { type: 'image/png' });
+
+    if(navigator.canShare && navigator.canShare({ files: [file] })){
+      try{
+        await navigator.share({ files: [file], title: 'BOSS Birthday Card' });
+        return;
+      }catch(err){
+        if(err && err.name === 'AbortError') return; // user cancelled the share sheet
+        // otherwise fall through to the link fallback below
+      }
+    }
+
+    // Fallback for browsers without file-sharing support (mainly desktop):
+    // download the image, then open WhatsApp with the greeting text pre-filled.
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url; link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+
+    const waUrl = buildWhatsappUrl(c);
+    if(waUrl){
+      showToast('Card downloaded — attach it in the WhatsApp chat that just opened.');
+      window.location.href = waUrl;
+    }
+  }, 'image/png');
+});
+
+document.getElementById('saveBtn').addEventListener('click', saveClient);
+document.getElementById('toggleMeasurementsBtn').addEventListener('click', ()=>{
+  const wrap = document.getElementById('measurementsWrap');
+  const sym = document.getElementById('toggleSym');
+  const btn = document.getElementById('toggleMeasurementsBtn');
+  const isOpen = wrap.style.display !== 'none';
+  wrap.style.display = isOpen ? 'none' : 'block';
+  sym.textContent = isOpen ? '+' : '−';
+  btn.lastChild.textContent = isOpen
+    ? ' Add Tailoring Measurements & Alteration Notes'
+    : ' Hide Tailoring Measurements & Alteration Notes';
+});
+document.getElementById('clearBtn').addEventListener('click', resetForm);
+document.getElementById('newClientBtn').addEventListener('click', resetForm);
+document.getElementById('deleteBtn').addEventListener('click', deleteClient);
+document.getElementById('exportBtn').addEventListener('click', exportExcel);
+
+document.getElementById('waChatBtn').addEventListener('click', ()=>{
+  const code = document.getElementById('f_whatsappCode').value;
+  const number = document.getElementById('f_whatsapp').value.trim();
+  if(!number){ showToast('Enter a WhatsApp number first.'); return; }
+  const digits = (code + number).replace(/[^\d]/g,'');
+  window.open(`https://wa.me/${digits}`, '_blank');
+});
+document.getElementById('searchInput').addEventListener('input', renderList);
+
+loadCustomers();
+
+if('serviceWorker' in navigator && window.self === window.top){
+  window.addEventListener('load', ()=>{
+    try{
+      navigator.serviceWorker.register('service-worker.js').catch(()=>{ /* offline shell unavailable, app still works online */ });
+    }catch(e){ /* registration not permitted in this context — safe to ignore */ }
+  });
+}
+</script>
+</body>
+</html>

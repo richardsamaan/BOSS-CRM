@@ -343,6 +343,21 @@
   .staff-edit{display:none;margin-top:12px;padding:12px;background:var(--paper);border-radius:1px;}
   .staff-edit.show{display:block;}
   .staff-edit .row{display:flex;gap:8px;margin-bottom:8px;align-items:center;}
+
+  .items-panel{border:1px solid var(--line);border-radius:2px;overflow:hidden;background:var(--card);}
+  .items-row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);}
+  .items-row:last-child{border-bottom:none;}
+  .items-row.head{background:var(--paper);font-size:10.5px;letter-spacing:0.5px;text-transform:uppercase;color:var(--grey);font-weight:700;}
+  .items-row input{width:100%;padding:8px 9px;font-size:13px;border:1px solid var(--line);border-radius:1px;background:var(--paper);font-family:inherit;color:var(--ink);}
+  .items-row input:focus{outline:none;border-color:var(--gold);}
+  .items-row input:disabled{background:#EAE9E6;color:var(--grey);}
+  .items-cell-meta{font-size:10px;color:var(--grey-light);margin-top:4px;line-height:1.3;}
+  .items-empty{padding:16px 12px;font-size:12.5px;color:var(--grey);text-align:center;}
+  .items-add-row{padding:12px;border-top:1px solid var(--line);background:var(--paper);}
+  @media(max-width:520px){
+    .items-row{grid-template-columns:1fr 1fr auto;gap:6px;padding:9px 8px;}
+    .items-row input{font-size:12.5px;padding:7px 7px;}
+  }
   .staff-edit input{
     flex:1;padding:8px 9px;font-size:12.5px;border:1px solid var(--line);border-radius:1px;
     background:#fff;font-family:inherit;
@@ -438,6 +453,20 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="activityModal">
+  <div class="modal-card">
+    <div class="title">Customer Activity</div>
+    <p id="activitySubtitle">Clients you've added, by day.</p>
+    <div class="field" style="margin-bottom:16px;">
+      <label>Select a date</label>
+      <input type="date" id="activityDateInput">
+    </div>
+    <div id="activitySummary" style="font-size:13.5px;font-weight:700;margin-bottom:10px;"></div>
+    <div id="activityList"></div>
+    <div class="modal-close"><button class="btn-outline" id="closeActivityModal">Close</button></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="cardModal">
   <div class="modal-card" style="max-width:440px;padding:20px;background:transparent;box-shadow:none;">
     <div class="card-mockup">
@@ -476,6 +505,7 @@
     </div>
     <div class="topactions">
       <span class="count-pill" id="countPill">0 clients on file</span>
+      <button class="btn-text" id="myCustomersBtn" style="display:none;color:#D8D6D2;text-transform:none;">My Customers: 0</button>
       <span class="user-pill" id="userPill" style="display:none;"></span>
       <button class="btn-text" id="staffAccessBtn" style="display:none;color:#D8D6D2;">Staff access</button>
       <button class="btn-gold" id="exportBtn" style="display:none;">Download Excel</button>
@@ -683,6 +713,25 @@
               <option>XL</option><option>XXL</option><option>XXXL</option>
             </select>
           </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <div class="eyebrow">Wishlist</div>
+          <div class="title">Interested Items</div>
+          <div class="ruler"></div>
+        </div>
+        <div class="items-panel">
+          <div class="items-row head">
+            <div>Barcode</div>
+            <div>Interested Price (BHD)</div>
+            <div>&nbsp;</div>
+          </div>
+          <div id="itemsList"></div>
+        </div>
+        <div class="items-add-row">
+          <button class="btn-outline" id="addItemBtn" type="button">+ Add Interested Item</button>
         </div>
       </div>
 
@@ -1062,6 +1111,15 @@ function signIn(account){
   document.getElementById('countPill').textContent =
     customers.length + (customers.length===1 ? ' client on file' : ' clients on file');
   updateBirthdayBadge();
+  updateMyCustomersPill();
+}
+
+function updateMyCustomersPill(){
+  const btn = document.getElementById('myCustomersBtn');
+  if(!currentUser){ btn.style.display = 'none'; return; }
+  const mine = customers.filter(c=>c.createdById===currentUser.id).length;
+  btn.textContent = 'My Customers: ' + mine;
+  btn.style.display = 'inline';
 }
 
 document.getElementById('logoutBtn').addEventListener('click', function(){
@@ -1071,6 +1129,7 @@ document.getElementById('logoutBtn').addEventListener('click', function(){
   document.getElementById('loginOverlay').style.display = 'flex';
   document.getElementById('userPill').style.display = 'none';
   document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('myCustomersBtn').style.display = 'none';
   document.getElementById('staffAccessBtn').style.display = 'none';
   document.getElementById('exportBtn').style.display = 'none';
   document.getElementById('mainPanel').style.display = 'none';
@@ -1290,6 +1349,65 @@ buildCodeOptions(document.getElementById('f_whatsappCode'), '+973');
 /* ================= CUSTOMER DATA ================= */
 let customers = [];
 let activeId = null;
+let currentInterestedItems = []; // working copy of interested items for the record in the form
+
+function genItemId(){
+  return 'II' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+
+function currentEditableRecord(){
+  return activeId ? customers.find(c=>c.id===activeId) : null;
+}
+
+function renderInterestedItems(){
+  const list = document.getElementById('itemsList');
+  const editable = canEdit(currentEditableRecord());
+  document.getElementById('addItemBtn').style.display = editable ? 'inline-block' : 'none';
+
+  if(currentInterestedItems.length === 0){
+    list.innerHTML = '<div class="items-empty">No interested items yet.</div>';
+    return;
+  }
+
+  list.innerHTML = currentInterestedItems.map((it, idx) => {
+    const meta = it.staffName
+      ? `<div class="items-cell-meta">Added by ${it.staffName}${it.createdAt ? ' · ' + new Date(it.createdAt).toLocaleDateString() : ''}</div>`
+      : '';
+    return `
+      <div class="items-row">
+        <div>
+          <input type="text" data-item-field="barcode" data-item-idx="${idx}" value="${(it.barcode||'').replace(/"/g,'&quot;')}" placeholder="Scan or type barcode" ${editable?'':'disabled'}>
+          ${meta}
+        </div>
+        <div>
+          <input type="number" step="0.001" min="0" data-item-field="price" data-item-idx="${idx}" value="${it.price!=null && it.price!=='' ? it.price : ''}" placeholder="0.000" ${editable?'':'disabled'}>
+        </div>
+        <div>
+          ${editable ? `<button class="btn-text danger" type="button" data-item-remove="${idx}">Remove</button>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  list.querySelectorAll('[data-item-field]').forEach(input=>{
+    input.addEventListener('input', function(){
+      const idx = parseInt(this.dataset.itemIdx, 10);
+      currentInterestedItems[idx][this.dataset.itemField] = this.value;
+    });
+  });
+  list.querySelectorAll('[data-item-remove]').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      const idx = parseInt(this.dataset.itemRemove, 10);
+      currentInterestedItems.splice(idx, 1);
+      renderInterestedItems();
+    });
+  });
+}
+
+document.getElementById('addItemBtn').addEventListener('click', ()=>{
+  currentInterestedItems.push({ id:null, barcode:'', price:'', staffId:null, staffName:null, createdAt:null, updatedAt:null });
+  renderInterestedItems();
+});
 
 function showToast(msg){
   const t = document.getElementById('toast');
@@ -1456,6 +1574,8 @@ function resetForm(){
   document.getElementById('f_whatsapp').classList.remove('err');
   document.getElementById('reqError').classList.remove('show');
   document.getElementById('statusTag').textContent = 'New record';
+  currentInterestedItems = [];
+  renderInterestedItems();
   applyFormPermissions(null);
   if(document.getElementById('masterSidebar').style.display !== 'none') renderList();
 }
@@ -1493,6 +1613,8 @@ function loadIntoForm(id){
   document.getElementById('f_whatsapp').classList.remove('err');
   document.getElementById('reqError').classList.remove('show');
   document.getElementById('statusTag').textContent = `Editing ${c.id} · added by ${c.createdByName||'—'}`;
+  currentInterestedItems = (c.interestedItems || []).map(it => ({ ...it }));
+  renderInterestedItems();
   applyFormPermissions(c);
   if(document.getElementById('masterSidebar').style.display !== 'none') renderList();
 }
@@ -1522,6 +1644,43 @@ async function saveClient(){
   const whatsappCode = document.getElementById('f_whatsappCode').value;
   const whatsappNumber = whatsapp;
 
+  const finalItems = [];
+  let skippedIncomplete = 0;
+  currentInterestedItems.forEach(it=>{
+    const barcode = (it.barcode || '').toString().trim();
+    const priceRaw = (it.price !== undefined && it.price !== null) ? it.price.toString().trim() : '';
+    if(!barcode && !priceRaw) return; // fully empty row, silently drop
+    if(!barcode || priceRaw === ''){ skippedIncomplete++; return; } // incomplete row, drop and warn
+    const price = parseFloat(priceRaw);
+    if(isNaN(price)){ skippedIncomplete++; return; }
+
+    if(it.id){
+      const prior = (existingRecord && existingRecord.interestedItems || []).find(x=>x.id===it.id);
+      const changed = !prior || prior.barcode !== barcode || Number(prior.price) !== price;
+      finalItems.push({
+        id: it.id,
+        barcode, price,
+        staffId: prior ? prior.staffId : currentUser.id,
+        staffName: prior ? prior.staffName : currentUser.name,
+        createdAt: prior ? prior.createdAt : new Date().toISOString(),
+        updatedAt: changed ? new Date().toISOString() : (prior ? prior.updatedAt : new Date().toISOString())
+      });
+    } else {
+      const now = new Date().toISOString();
+      finalItems.push({
+        id: genItemId(),
+        barcode, price,
+        staffId: currentUser.id,
+        staffName: currentUser.name,
+        createdAt: now,
+        updatedAt: now
+      });
+    }
+  });
+  if(skippedIncomplete > 0){
+    showToast(`${skippedIncomplete} interested item${skippedIncomplete===1?'':'s'} skipped — needs both barcode and price.`);
+  }
+
   const record = {
     id,
     name,
@@ -1543,6 +1702,7 @@ async function saveClient(){
     measurements,
     alterationNote: document.getElementById('f_alteration').value.trim(),
     preference: document.getElementById('f_preference').value.trim(),
+    interestedItems: finalItems,
     updatedAt: new Date().toISOString(),
     createdById: existingRecord ? existingRecord.createdById : currentUser.id,
     createdByName: existingRecord ? existingRecord.createdByName : currentUser.name
@@ -1566,6 +1726,7 @@ async function saveClient(){
     showToast('Client saved.');
     loadIntoForm(id);
     updateBirthdayBadge();
+    updateMyCustomersPill();
   }
 }
 
@@ -1578,6 +1739,7 @@ async function deleteClient(){
     showToast('Client deleted.');
     resetForm();
     updateBirthdayBadge();
+    updateMyCustomersPill();
   }
 }
 
@@ -1619,11 +1781,32 @@ function exportExcel(){
     'Clients Added': customers.filter(c=>c.createdById===a.id).length
   }));
 
+  const itemRows = [];
+  customers.forEach(c=>{
+    (c.interestedItems || []).forEach(it=>{
+      const added = it.createdAt ? new Date(it.createdAt) : null;
+      itemRows.push({
+        'Customer ID': c.id,
+        'Customer Name': `${c.name||''} ${c.lastName||''}`.trim(),
+        'WhatsApp': c.whatsapp || '',
+        'Email': c.email || '',
+        'Barcode': it.barcode || '',
+        'Interested Price': it.price ?? '',
+        'Staff Employee ID': it.staffId || '',
+        'Staff Name': it.staffName || '',
+        'Date Interested': added ? added.toLocaleDateString() : '',
+        'Time Interested': added ? added.toLocaleTimeString() : ''
+      });
+    });
+  });
+
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(rows);
   XLSX.utils.book_append_sheet(wb, ws, 'Clients');
   const staffWs = XLSX.utils.json_to_sheet(staffRows);
   XLSX.utils.book_append_sheet(wb, staffWs, 'Staff Summary');
+  const itemsWs = XLSX.utils.json_to_sheet(itemRows.length ? itemRows : [{ 'Customer ID':'', 'Customer Name':'', 'WhatsApp':'', 'Email':'', 'Barcode':'', 'Interested Price':'', 'Staff Employee ID':'', 'Staff Name':'', 'Date Interested':'', 'Time Interested':'' }]);
+  XLSX.utils.book_append_sheet(wb, itemsWs, 'Interested Items');
 
   const stamp = new Date().toISOString().slice(0,10);
   XLSX.writeFile(wb, `BOSS_Bahrain_Client_Book_${stamp}.xlsx`);
@@ -1675,6 +1858,59 @@ function renderBirthdayModal(){
     });
   }
   document.getElementById('birthdayModal').classList.add('show');
+}
+
+function toLocalDateStr(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function renderActivityModal(){
+  const dateInput = document.getElementById('activityDateInput');
+  if(!dateInput.value){
+    dateInput.value = toLocalDateStr(new Date());
+  }
+  document.getElementById('activityModal').classList.add('show');
+  renderActivityForDate(dateInput.value);
+}
+
+function renderActivityForDate(dateStr){
+  if(!dateStr) return;
+  const isMaster = currentUser.role === 'master';
+  const pool = isMaster ? customers : customers.filter(c=>c.createdById===currentUser.id);
+  const matches = pool.filter(c=> c.createdAt && toLocalDateStr(new Date(c.createdAt)) === dateStr);
+
+  const prettyDate = new Date(dateStr+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('activitySubtitle').textContent = isMaster
+    ? `All staff activity for ${prettyDate}.`
+    : `Your activity for ${prettyDate}.`;
+  document.getElementById('activitySummary').textContent = `Customers Added: ${matches.length}`;
+
+  const listEl = document.getElementById('activityList');
+  if(matches.length === 0){
+    listEl.innerHTML = '<div class="items-empty">No customers added on this date.</div>';
+    return;
+  }
+  listEl.innerHTML = matches.map(c=>{
+    const t = new Date(c.createdAt);
+    return `
+      <div class="staff-row" data-actid="${c.id}" style="cursor:pointer;">
+        <div class="info">
+          <div class="n">${c.name||''} ${c.lastName||''}</div>
+          <div class="i">${c.id}${isMaster ? ' · added by ' + (c.createdByName||'—') : ''} · ${t.toLocaleTimeString()}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  listEl.querySelectorAll('[data-actid]').forEach(row=>{
+    row.addEventListener('click', ()=>{
+      document.getElementById('activityModal').classList.remove('show');
+      document.getElementById('mainPanel').style.display = 'block';
+      loadIntoForm(row.dataset.actid);
+    });
+  });
 }
 
 function drawSpacedText(ctx, text, cx, y, spacing){
@@ -1807,6 +2043,13 @@ function openGreetingCard(c){
 document.getElementById('birthdayBtn').addEventListener('click', renderBirthdayModal);
 document.getElementById('closeBirthdayModal').addEventListener('click', ()=>{
   document.getElementById('birthdayModal').classList.remove('show');
+});
+document.getElementById('myCustomersBtn').addEventListener('click', renderActivityModal);
+document.getElementById('closeActivityModal').addEventListener('click', ()=>{
+  document.getElementById('activityModal').classList.remove('show');
+});
+document.getElementById('activityDateInput').addEventListener('change', function(){
+  renderActivityForDate(this.value);
 });
 document.getElementById('closeCardModal').addEventListener('click', ()=>{
   document.getElementById('cardModal').classList.remove('show');

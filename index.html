@@ -3272,7 +3272,7 @@ function loadThankYouBgImage(){
       const img = new Image();
       img.onload = ()=>resolve(img);
       img.onerror = reject;
-      img.src = 'thankyou-bg.jpg';
+      img.src = 'thankyou-bg-black.jpg';
     });
   }
   return thankYouBgImagePromise;
@@ -3285,14 +3285,14 @@ async function ensureFontLoaded(fontSpec){
   }catch(e){ /* font API unsupported — canvas will fall back to a default font */ }
 }
 
-function generateQrDataUrl(text){
+function generateQrDataUrl(text, darkColor, lightColor){
   return new Promise((resolve, reject)=>{
     if(typeof QRCode === 'undefined'){ reject(new Error('QR library not loaded')); return; }
     QRCode.toDataURL(text, {
       errorCorrectionLevel: 'H',
       margin: 1,
       width: 600,
-      color: { dark: '#0A0A0A', light: '#FFFFFF' }
+      color: { dark: darkColor || '#0A0A0A', light: lightColor || '#FFFFFF' }
     }, (err, url)=>{
       if(err) reject(err); else resolve(url);
     });
@@ -3304,20 +3304,20 @@ async function renderThankYouCardCanvas(c){
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
-  const GOLD = '#AD8A54';
-  const INK = '#1A1A1A';
+  const GOLD = '#C9A24B';
+  const CARD_BLACK = '#0A0A0A';
 
   await ensureFontLoaded('80px "Great Vibes"');
   const [bgImg, qrDataUrl] = await Promise.all([
     loadThankYouBgImage().catch(()=>null),
-    generateQrDataUrl(c.id || '').catch((err)=>{ console.error('QR generation failed:', err); return null; })
+    generateQrDataUrl(c.id || '', GOLD, CARD_BLACK).catch((err)=>{ console.error('QR generation failed:', err); return null; })
   ]);
 
-  // Background
+  // Background — black marble with gold veining
   if(bgImg){
     ctx.drawImage(bgImg, 0, 0, W, H);
   } else {
-    ctx.fillStyle = '#FAF9F7';
+    ctx.fillStyle = CARD_BLACK;
     ctx.fillRect(0,0,W,H);
   }
 
@@ -3335,17 +3335,23 @@ async function renderThankYouCardCanvas(c){
   ctx.font = '80px "Great Vibes", cursive';
   ctx.fillText(fullName || 'Valued Guest', W/2, 335);
 
-  // Thank-you message
-  ctx.fillStyle = INK;
+  // Thank-you message — gold, matching the card's overall gold-on-black palette
+  ctx.fillStyle = GOLD;
   ctx.font = '400 34px Georgia, "Times New Roman", serif';
   ctx.fillText('Thank you for honoring us with your visit.', W/2, 465);
   ctx.fillText('We look forward to welcoming you again.', W/2, 515);
 
-  // QR code — large, lower-middle of the card
+  // QR code — large, lower-middle of the card, framed in gold
   const qrSize = 380;
   const qrX = W/2 - qrSize/2;
   const qrY = 660;
+  const framePad = 22;
   let qrDrawn = false;
+
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(qrX - framePad, qrY - framePad, qrSize + framePad*2, qrSize + framePad*2);
+
   if(qrDataUrl){
     const qrImg = await new Promise((resolve)=>{
       const im = new Image();
@@ -3357,11 +3363,11 @@ async function renderThankYouCardCanvas(c){
       ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
       qrDrawn = true;
 
-      // Small white badge with "BOSS" centered on the QR (QR error-correction level H tolerates this)
+      // Small dark badge with "BOSS" centered on the QR (QR error-correction level H tolerates this)
       const badgeW = 120, badgeH = 48;
       const bx = W/2 - badgeW/2, by = qrY + qrSize/2 - badgeH/2;
-      ctx.fillStyle = '#FFFFFF';
-      ctx.strokeStyle = INK;
+      ctx.fillStyle = CARD_BLACK;
+      ctx.strokeStyle = GOLD;
       ctx.lineWidth = 1.5;
       const r = 4;
       ctx.beginPath();
@@ -3373,7 +3379,7 @@ async function renderThankYouCardCanvas(c){
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = INK;
+      ctx.fillStyle = GOLD;
       ctx.font = '800 24px Arial, sans-serif';
       ctx.fillText('BOSS', W/2, by + badgeH/2 + 8);
     }
@@ -3389,7 +3395,7 @@ async function renderThankYouCardCanvas(c){
   }
 
   // Caption, near the bottom edge
-  ctx.fillStyle = '#4A4742';
+  ctx.fillStyle = GOLD;
   ctx.font = '400 24px Arial, sans-serif';
   ctx.fillText('Please scan your QR code on your next visit', W/2, H - 90);
 
